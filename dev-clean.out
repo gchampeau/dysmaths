@@ -1,0 +1,14 @@
+
+> maths-facile@0.1.0 dev
+> next dev --port 3000
+
+   ▲ Next.js 15.4.11
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.148:3000
+
+ ✓ Starting...
+ ✓ Ready in 1630ms
+ ○ Compiling / ...
+ ✓ Compiled / in 4.6s (1103 modules)
+ GET / 200 in 5053ms
+ ✓ Compiled in 152ms (429 modules)
