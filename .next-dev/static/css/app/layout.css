@@ -1189,11 +1189,11 @@ input {
   gap: 0.35rem;
   width: max-content;
   max-width: calc(100% - 2rem);
-  padding: 0.75rem 0.85rem;
-  border-radius: 22px;
-  border: 1px solid rgba(92, 108, 129, 0.14);
-  background: #ffffff;
-  box-shadow: 0 14px 28px rgba(31, 45, 61, 0.12);
+  padding: 0.2rem 0.28rem;
+  border-radius: 14px;
+  border: 1px dashed transparent;
+  background: transparent;
+  box-shadow: none;
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
@@ -1204,8 +1204,8 @@ input {
 }
 
 .floating-math-block-selected {
-  border-color: rgba(217, 119, 69, 0.48);
-  box-shadow: 0 16px 34px rgba(31, 45, 61, 0.14);
+  border-color: rgba(217, 119, 69, 0.44);
+  background: rgba(255, 249, 241, 0.92);
 }
 
 .floating-math-block:active {
