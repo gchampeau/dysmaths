@@ -344,6 +344,7 @@ export function MathWorkbook() {
   const [isExporting, setIsExporting] = useState<"pdf" | "word" | null>(null);
   const [isCanvasDropActive, setIsCanvasDropActive] = useState(false);
   const [selectionRect, setSelectionRect] = useState<SelectionRect>(null);
+  const [isCanvasInteracting, setIsCanvasInteracting] = useState(false);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef<Range | null>(null);
@@ -505,6 +506,7 @@ export function MathWorkbook() {
       dragRef.current = null;
       pendingSelectionRef.current = null;
       setSelectionRect(null);
+      setIsCanvasInteracting(false);
     }
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -679,6 +681,7 @@ export function MathWorkbook() {
     const point = getCanvasPoint(clientX, clientY);
     pendingSelectionRef.current = { originX: point.x, originY: point.y, started: false };
     setSelectionRect(null);
+    setIsCanvasInteracting(true);
     clearFloatingSelection();
     setOpenMenu(null);
   }
@@ -886,6 +889,7 @@ export function MathWorkbook() {
   function startDragging(itemType: "block" | "symbol", itemId: string, x: number, y: number, event: ReactMouseEvent<HTMLElement>) {
     event.preventDefault();
     event.stopPropagation();
+    setIsCanvasInteracting(true);
 
     const canvas = canvasRef.current;
 
@@ -1509,13 +1513,14 @@ export function MathWorkbook() {
           </div>
 
           <div
-            className={`document-canvas ${isCanvasDropActive ? "document-canvas-drop-active" : ""}`}
+            className={`document-canvas ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""}`}
             ref={canvasRef}
             onDragOver={handleCanvasDragOver}
             onDragLeave={handleCanvasDragLeave}
             onDrop={handleCanvasDrop}
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
+                event.preventDefault();
                 beginAreaSelection(event.clientX, event.clientY);
                 return;
               }
@@ -1531,6 +1536,7 @@ export function MathWorkbook() {
               suppressContentEditableWarning
               onMouseDown={(event) => {
                 if (event.target === event.currentTarget) {
+                  event.preventDefault();
                   beginAreaSelection(event.clientX, event.clientY);
                 } else {
                   clearFloatingSelection();

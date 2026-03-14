@@ -1166,6 +1166,12 @@ input {
     inset 0 0 0 999px rgba(255, 246, 236, 0.28);
 }
 
+.document-canvas-interacting .canvas-editor {
+  -moz-user-select: none;
+       user-select: none;
+  -webkit-user-select: none;
+}
+
 .canvas-editor {
   position: absolute;
   inset: 0;
