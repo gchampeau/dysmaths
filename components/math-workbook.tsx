@@ -252,13 +252,13 @@ function renderMathPreview(block: MathBlock) {
     return (
       <div className="math-layout division-layout">
         <div className="division-preview">
-          <div className="division-left">{block.divisor || "diviseur"}</div>
-          <div className="division-right">
+          <div className="division-quotient">{block.quotient || "quotient"}</div>
+          <div className="division-divisor">{block.divisor || "diviseur"}</div>
+          <div className="division-bracket">
             <div className="division-dividend">{block.dividend || "dividende"}</div>
-            <div className="division-quotient">{block.quotient || "quotient"}</div>
+            {block.remainder ? <div className="division-remainder">{block.remainder}</div> : null}
           </div>
         </div>
-        {block.remainder ? <p className="math-result">Reste : {block.remainder}</p> : null}
         {block.caption ? <p className="math-caption">{block.caption}</p> : null}
       </div>
     );
