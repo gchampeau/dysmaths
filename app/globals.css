@@ -568,8 +568,28 @@ input {
   font-family: var(--font-display);
 }
 
+.fraction-preview-editing {
+  gap: 0.08rem;
+}
+
 .fraction-line {
   padding: 0.1rem 0.6rem;
+}
+
+.fraction-inline-input {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  min-height: 0;
+  padding: 0.02rem 0.18rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.92em;
+  text-align: center;
 }
 
 .fraction-bar {

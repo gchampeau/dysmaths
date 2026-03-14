@@ -3,6 +3,7 @@
 import {
   type ClipboardEvent as ReactClipboardEvent,
   type DragEvent as ReactDragEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   useEffect,
   useMemo,
@@ -151,6 +152,13 @@ type ToolbarDragMeta = {
   offsetY: number;
   previewNode: HTMLElement | null;
 };
+
+type EditingFractionState =
+  | {
+      blockId: string;
+      field: "numerator" | "denominator";
+    }
+  | null;
 
 const STORAGE_KEY = "maths-facile-free-layout-v1";
 const FLOATING_TEXTBOX_Y_OFFSET = 10;
@@ -361,6 +369,7 @@ export function MathWorkbook() {
   const [selectedSymbolIds, setSelectedSymbolIds] = useState<string[]>([]);
   const [selectedTextBoxIds, setSelectedTextBoxIds] = useState<string[]>([]);
   const [editingTextBoxId, setEditingTextBoxId] = useState<string | null>(null);
+  const [editingFraction, setEditingFraction] = useState<EditingFractionState>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isExporting, setIsExporting] = useState<"pdf" | "word" | null>(null);
   const [isCanvasDropActive, setIsCanvasDropActive] = useState(false);
@@ -383,6 +392,7 @@ export function MathWorkbook() {
   const symbolNodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const textBoxNodeRefs = useRef<Record<string, HTMLElement | null>>({});
   const pendingFocusTextBoxIdRef = useRef<string | null>(null);
+  const fractionInputRefs = useRef<Record<string, { numerator?: HTMLInputElement | null; denominator?: HTMLInputElement | null }>>({});
 
   const activeInlineShortcuts = useMemo(
     () =>
@@ -466,6 +476,21 @@ export function MathWorkbook() {
     node.focus();
     pendingFocusTextBoxIdRef.current = null;
   }, [state.textBoxes]);
+
+  useEffect(() => {
+    if (!editingFraction) {
+      return;
+    }
+
+    const input = fractionInputRefs.current[editingFraction.blockId]?.[editingFraction.field];
+
+    if (!input) {
+      return;
+    }
+
+    input.focus();
+    input.select();
+  }, [editingFraction]);
 
   useEffect(() => {
     const element = editorRef.current;
@@ -914,6 +939,19 @@ export function MathWorkbook() {
   }
 
   function openInsertModal(type: StructuredTool) {
+    if (type === "fraction") {
+      const block = createBlock("fraction");
+
+      setState((current) => ({
+        ...current,
+        blocks: [...current.blocks, block]
+      }));
+      selectSingleBlock(block.id);
+      setEditingFraction({ blockId: block.id, field: "numerator" });
+      setOpenMenu(null);
+      return;
+    }
+
     setOpenMenu(null);
     setModalState({
       mode: "insert",
@@ -925,6 +963,13 @@ export function MathWorkbook() {
     const block = state.blocks.find((item) => item.id === blockId);
 
     if (!block) {
+      return;
+    }
+
+    if (block.type === "fraction") {
+      setOpenMenu(null);
+      selectSingleBlock(blockId);
+      setEditingFraction({ blockId, field: "numerator" });
       return;
     }
 
@@ -1003,6 +1048,47 @@ export function MathWorkbook() {
         textBox.id === textBoxId ? { ...textBox, ...updates } : textBox
       )
     }));
+  }
+
+  function updateFractionField(blockId: string, key: "numerator" | "denominator", value: string) {
+    setState((current) => ({
+      ...current,
+      blocks: current.blocks.map((block) =>
+        block.id === blockId && block.type === "fraction" ? { ...block, [key]: value } : block
+      )
+    }));
+  }
+
+  function finishFractionEditing(blockId: string) {
+    const block = blocksRef.current.find((item) => item.id === blockId);
+
+    if (!block || block.type !== "fraction") {
+      setEditingFraction(null);
+      return;
+    }
+
+    if (!block.numerator.trim() && !block.denominator.trim()) {
+      removeBlock(blockId);
+      setEditingFraction(null);
+      return;
+    }
+
+    setEditingFraction(null);
+  }
+
+  function handleFractionKeyDown(blockId: string, field: "numerator" | "denominator", event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (field === "numerator") {
+      setEditingFraction({ blockId, field: "denominator" });
+      return;
+    }
+
+    finishFractionEditing(blockId);
   }
 
   function removeTextBox(textBoxId: string) {
@@ -1187,6 +1273,18 @@ export function MathWorkbook() {
     handleToolDragEnd();
 
     if (payload.kind === "structured") {
+      if (payload.toolId === "fraction") {
+        const block = { ...createBlock("fraction"), x: position.x, y: position.y };
+
+        setState((current) => ({
+          ...current,
+          blocks: [...current.blocks, block]
+        }));
+        selectSingleBlock(block.id);
+        setEditingFraction({ blockId: block.id, field: "numerator" });
+        return;
+      }
+
       setModalState({
         mode: "insert",
         block: { ...createBlock(payload.toolId), x: position.x, y: position.y }
@@ -1745,7 +1843,61 @@ export function MathWorkbook() {
                   openEditModal(block.id);
                 }}
               >
-                {renderMathPreview(block)}
+                {block.type === "fraction" && editingFraction?.blockId === block.id ? (
+                  <div className="math-layout fraction-layout">
+                    <div className="fraction-preview fraction-preview-editing">
+                      <input
+                        ref={(node) => {
+                          fractionInputRefs.current[block.id] = {
+                            ...fractionInputRefs.current[block.id],
+                            numerator: node
+                          };
+                        }}
+                        className="fraction-inline-input"
+                        value={block.numerator}
+                        placeholder="a"
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onChange={(event) => updateFractionField(block.id, "numerator", event.target.value)}
+                        onKeyDown={(event) => handleFractionKeyDown(block.id, "numerator", event)}
+                        onBlur={() => {
+                          if (editingFraction?.field === "numerator") {
+                            setTimeout(() => {
+                              if (editingFraction?.field === "numerator") {
+                                finishFractionEditing(block.id);
+                              }
+                            }, 0);
+                          }
+                        }}
+                      />
+                      <div className="fraction-bar" />
+                      <input
+                        ref={(node) => {
+                          fractionInputRefs.current[block.id] = {
+                            ...fractionInputRefs.current[block.id],
+                            denominator: node
+                          };
+                        }}
+                        className="fraction-inline-input"
+                        value={block.denominator}
+                        placeholder="b"
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onChange={(event) => updateFractionField(block.id, "denominator", event.target.value)}
+                        onKeyDown={(event) => handleFractionKeyDown(block.id, "denominator", event)}
+                        onBlur={() => {
+                          if (editingFraction?.field === "denominator") {
+                            setTimeout(() => {
+                              if (editingFraction?.field === "denominator") {
+                                finishFractionEditing(block.id);
+                              }
+                            }, 0);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  renderMathPreview(block)
+                )}
               </article>
             ))}
 
