@@ -8,6 +8,7 @@ import {
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type TouchEvent as ReactTouchEvent,
   useEffect,
   useMemo,
   useRef,
@@ -234,7 +235,7 @@ type SnapGuides = {
   y: number | null;
 };
 
-type AdvancedTool = "move" | "note" | "draw" | null;
+type AdvancedTool = "select" | "move" | "note" | "draw" | null;
 
 const STORAGE_KEY = "maths-facile-free-layout-v1";
 const FLOATING_TEXTBOX_Y_OFFSET = 10;
@@ -936,6 +937,7 @@ export function MathWorkbook() {
   const [editingTextBoxId, setEditingTextBoxId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<EditingBlockState>(null);
   const [advancedTool, setAdvancedTool] = useState<AdvancedTool>(null);
+  const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(false);
   const [draftStroke, setDraftStroke] = useState<FreehandPoint[] | null>(null);
   const [canvasQuickMenu, setCanvasQuickMenu] = useState<CanvasQuickMenu>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuides>({ x: null, y: null });
@@ -976,19 +978,9 @@ export function MathWorkbook() {
   const transientHistoryKindRef = useRef<"drag" | "edit" | null>(null);
   const suspendHistoryRef = useRef(false);
 
-  const activeInlineShortcuts = useMemo(
-    () =>
-      INLINE_SHORTCUT_GROUPS.map((group) => ({
-        ...group,
-        items: group.items.filter((item) => item.modes.includes(state.mode))
-      })).filter((group) => group.items.length > 0),
-    [state.mode]
-  );
+  const activeInlineShortcuts = useMemo(() => INLINE_SHORTCUT_GROUPS, []);
 
-  const activeStructuredTools = useMemo(
-    () => STRUCTURED_TOOLS.filter((tool) => tool.modes.includes(state.mode)),
-    [state.mode]
-  );
+  const activeStructuredTools = useMemo(() => STRUCTURED_TOOLS, []);
   const textBoxShortcuts = useMemo(
     () =>
       activeInlineShortcuts.flatMap((group) =>
@@ -1001,14 +993,7 @@ export function MathWorkbook() {
       ),
     [activeInlineShortcuts]
   );
-  const commonInlineShortcuts = useMemo(
-    () => activeInlineShortcuts.flatMap((group) => group.items).filter((item) => item.modes.includes("college")),
-    [activeInlineShortcuts]
-  );
-  const lyceeInlineShortcuts = useMemo(
-    () => INLINE_SHORTCUT_GROUPS.flatMap((group) => group.items).filter((item) => item.modes.length === 1 && item.modes[0] === "lycee"),
-    []
-  );
+  const commonInlineShortcuts = useMemo(() => activeInlineShortcuts.flatMap((group) => group.items).filter((item) => item.modes.includes("college")), [activeInlineShortcuts]);
   const visibleLyceeInlineShortcuts = useMemo(
     () => activeInlineShortcuts.flatMap((group) => group.items).filter((item) => item.modes.length === 1 && item.modes[0] === "lycee"),
     [activeInlineShortcuts]
@@ -1214,9 +1199,9 @@ export function MathWorkbook() {
   }, [state.textHtml]);
 
   useEffect(() => {
-    function handleMouseMove(event: MouseEvent) {
+    function handlePointerMove(clientX: number, clientY: number) {
       if (isDrawingStrokeRef.current) {
-        const point = getCanvasPoint(event.clientX, event.clientY);
+        const point = getCanvasPoint(clientX, clientY);
         const currentPoints = draftStrokeRef.current;
         const lastPoint = currentPoints[currentPoints.length - 1];
 
@@ -1233,7 +1218,7 @@ export function MathWorkbook() {
           return;
         }
 
-        const point = getCanvasPoint(event.clientX, event.clientY);
+        const point = getCanvasPoint(clientX, clientY);
         const current = pendingSelectionRef.current;
         const distance = Math.hypot(point.x - current.originX, point.y - current.originY);
 
@@ -1264,8 +1249,8 @@ export function MathWorkbook() {
       }
 
       const bounds = canvas.getBoundingClientRect();
-      const nextAnchorX = event.clientX - bounds.left - dragRef.current.pointerOffsetX;
-      const nextAnchorY = event.clientY - bounds.top - dragRef.current.pointerOffsetY;
+      const nextAnchorX = clientX - bounds.left - dragRef.current.pointerOffsetX;
+      const nextAnchorY = clientY - bounds.top - dragRef.current.pointerOffsetY;
       const draggedNode =
         dragRef.current.itemType === "block"
           ? blockNodeRefs.current[dragRef.current.itemId]
@@ -1341,6 +1326,25 @@ export function MathWorkbook() {
       }));
     }
 
+    function handleMouseMove(event: MouseEvent) {
+      handlePointerMove(event.clientX, event.clientY);
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+      if (!isDrawingStrokeRef.current && !pendingSelectionRef.current && !dragRef.current) {
+        return;
+      }
+
+      const touch = event.touches[0];
+
+      if (!touch) {
+        return;
+      }
+
+      event.preventDefault();
+      handlePointerMove(touch.clientX, touch.clientY);
+    }
+
     function handleMouseUp() {
       if (isDrawingStrokeRef.current) {
         const points = draftStrokeRef.current;
@@ -1370,7 +1374,7 @@ export function MathWorkbook() {
       if (pendingSelectionRef.current && !pendingSelectionRef.current.started) {
         if (advancedToolRef.current === "note") {
           createAnnotationTextBoxAt(pendingSelectionRef.current.originX, pendingSelectionRef.current.originY);
-        } else if (advancedToolRef.current !== "move") {
+        } else if (advancedToolRef.current !== "move" && advancedToolRef.current !== "select") {
           openCanvasQuickMenuAtPoint(pendingSelectionRef.current.originX, pendingSelectionRef.current.originY);
         }
       }
@@ -1388,10 +1392,14 @@ export function MathWorkbook() {
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleMouseUp);
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleMouseUp);
     };
   }, []);
 
@@ -1734,6 +1742,30 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     setCanvasQuickMenu(null);
     clearFloatingSelection();
     setOpenMenu(null);
+  }
+
+  function handleSurfaceTouchStart(
+    event: ReactTouchEvent<HTMLElement>,
+    currentTarget: EventTarget & HTMLElement,
+    allowEditorSurface = false
+  ) {
+    if (event.touches.length === 0) {
+      return;
+    }
+
+    if (event.target !== currentTarget && !allowEditorSurface) {
+      return;
+    }
+
+    if (selectedTextBoxId) {
+      event.preventDefault();
+      closeFloatingTextEditing();
+      return;
+    }
+
+    const touch = event.touches[0];
+    event.preventDefault();
+    beginAreaSelection(touch.clientX, touch.clientY);
   }
 
   function beginTextBoxEditing(textBoxId: string) {
@@ -2702,6 +2734,10 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
   function startDragging(itemType: "block" | "symbol" | "textBox" | "stroke", itemId: string, x: number, y: number, event: ReactMouseEvent<Element>) {
     event.preventDefault();
     event.stopPropagation();
+    startDraggingAtPoint(itemType, itemId, x, y, event.clientX, event.clientY);
+  }
+
+  function startDraggingAtPoint(itemType: "block" | "symbol" | "textBox" | "stroke", itemId: string, x: number, y: number, clientX: number, clientY: number) {
     setCanvasQuickMenu(null);
     setIsCanvasInteracting(true);
 
@@ -2746,8 +2782,8 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     dragRef.current = {
       itemType,
       itemId,
-      pointerOffsetX: event.clientX - bounds.left - x,
-      pointerOffsetY: event.clientY - bounds.top - y,
+      pointerOffsetX: clientX - bounds.left - x,
+      pointerOffsetY: clientY - bounds.top - y,
       groupBlockPositions: blocksRef.current
         .filter((block) => currentBlockIds.includes(block.id))
         .map((block) => ({ id: block.id, x: block.x, y: block.y })),
@@ -2778,6 +2814,24 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
         selectSingleStroke(itemId);
       }
     }
+  }
+
+  function handleTouchDragStart(
+    itemType: "block" | "symbol" | "textBox" | "stroke",
+    itemId: string,
+    x: number,
+    y: number,
+    event: ReactTouchEvent<Element>,
+    disabled = false
+  ) {
+    if (disabled || event.touches.length === 0) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    event.preventDefault();
+    event.stopPropagation();
+    startDraggingAtPoint(itemType, itemId, x, y, touch.clientX, touch.clientY);
   }
 
   function handleToolDragStart(payload: ToolbarDragPayload, event: ReactDragEvent<HTMLButtonElement>) {
@@ -3366,6 +3420,10 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     setOpenMenu((current) => (current === menu ? null : menu));
   }
 
+  function toggleAdvancedToolMode(tool: AdvancedTool) {
+    setAdvancedTool((current) => (current === tool ? null : tool));
+  }
+
   function handleHeaderDelete() {
     if (selectedCount === 0) {
       return;
@@ -3398,7 +3456,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
 
   return (
     <main className="editor-shell">
-      <header className="top-toolbar">
+      {isToolsPanelOpen ? <button type="button" className="tools-drawer-backdrop" aria-label="Fermer les outils" onClick={() => setIsToolsPanelOpen(false)} /> : null}
+
+      <header className={`top-toolbar ${isToolsPanelOpen ? "top-toolbar-open" : ""}`}>
         <div className="top-toolbar-inner">
           <div className="toolbar-row toolbar-row-primary sidebar-block sidebar-block-compact">
             <p className="sidebar-block-label">Document</p>
@@ -3411,28 +3471,6 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 onClick={resetDocument}
               >
                 Nouveau
-              </button>
-            </div>
-          </div>
-
-          <div className="toolbar-row sidebar-block sidebar-block-compact" aria-label="Niveau">
-            <p className="sidebar-block-label">Niveau</p>
-            <div className="panel-chip-row">
-              <button
-                type="button"
-                className={`chip-button ${state.mode === "college" ? "chip-button-active" : ""}`}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => setState((current) => ({ ...current, mode: "college" }))}
-              >
-                Collège
-              </button>
-              <button
-                type="button"
-                className={`chip-button ${state.mode === "lycee" ? "chip-button-active" : ""}`}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => setState((current) => ({ ...current, mode: "lycee" }))}
-              >
-                Lycée
               </button>
             </div>
           </div>
@@ -3470,6 +3508,14 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                   {tool.id === "fraction" ? "a/b" : tool.id === "division" ? "÷" : tool.id === "power" ? "x²" : "√"}
                 </button>
               ))}
+              <button
+                type="button"
+                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "draw" ? "toolbar-shortcut-active" : ""}`}
+                title="Dessin libre"
+                onClick={() => toggleAdvancedToolMode("draw")}
+              >
+                ✎
+              </button>
             </div>
           </div>
 
@@ -3501,32 +3547,28 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block">
             <p className="sidebar-block-label">Outils lycée</p>
-            {state.mode === "lycee" ? (
-              <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Raccourcis lycée">
-                {visibleLyceeInlineShortcuts.map((shortcut) => (
-                  <button
-                    key={shortcut.id}
-                    type="button"
-                    className="toolbar-shortcut toolbar-shortcut-symbol"
-                    draggable
-                    title={shortcut.hint}
-                    onDragStart={(event) => handleToolDragStart({ kind: "shortcut", shortcutId: shortcut.id }, event)}
-                    onDragEnd={handleToolDragEnd}
-                    onClick={() => {
-                      if (shouldIgnoreToolbarClick()) {
-                        return;
-                      }
+            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Raccourcis lycée">
+              {visibleLyceeInlineShortcuts.map((shortcut) => (
+                <button
+                  key={shortcut.id}
+                  type="button"
+                  className="toolbar-shortcut toolbar-shortcut-symbol"
+                  draggable
+                  title={shortcut.hint}
+                  onDragStart={(event) => handleToolDragStart({ kind: "shortcut", shortcutId: shortcut.id }, event)}
+                  onDragEnd={handleToolDragEnd}
+                  onClick={() => {
+                    if (shouldIgnoreToolbarClick()) {
+                      return;
+                    }
 
-                      insertTextAtCursor(shortcut.content);
-                    }}
-                  >
-                    {renderShortcutGlyph(shortcut)}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="sidebar-helper">Passe en mode lycée pour afficher {lyceeInlineShortcuts.length} outils supplémentaires.</p>
-            )}
+                    insertTextAtCursor(shortcut.content);
+                  }}
+                >
+                  {renderShortcutGlyph(shortcut)}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="toolbar-row toolbar-row-format sidebar-block" aria-label="Mise en forme">
@@ -3606,10 +3648,20 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
             <div className="editor-local-toolbar-group toolbar-advanced-group" aria-label="Outils avancés">
               <button
                 type="button"
+                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "select" ? "sheet-tool-button-active" : ""}`}
+                title="Sélection"
+                aria-label="Sélection"
+                aria-pressed={advancedTool === "select"}
+                onClick={() => toggleAdvancedToolMode("select")}
+              >
+                <span className="selection-icon" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
                 className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "move" ? "toolbar-shortcut-move-active" : ""}`}
                 title="Déplacer"
                 aria-label="Déplacer"
-                onClick={() => setAdvancedTool((current) => (current === "move" ? null : "move"))}
+                onClick={() => toggleAdvancedToolMode("move")}
               >
                 {"✋\uFE0E"}
               </button>
@@ -3617,7 +3669,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 type="button"
                 className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "note" ? "toolbar-shortcut-active" : ""}`}
                 title="Petit texte"
-                onClick={() => setAdvancedTool((current) => (current === "note" ? null : "note"))}
+                onClick={() => toggleAdvancedToolMode("note")}
               >
                 Aa
               </button>
@@ -3631,14 +3683,6 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                   ×
                 </button>
               ) : null}
-              <button
-                type="button"
-                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "draw" ? "toolbar-shortcut-active" : ""}`}
-                title="Dessin libre"
-                onClick={() => setAdvancedTool((current) => (current === "draw" ? null : "draw"))}
-              >
-                ✎
-              </button>
             </div>
           </div>
         </div>
@@ -3648,6 +3692,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
       <section className="editor-stage">
         <div className="sheet-action-bar">
           <div className="sheet-action-group">
+            <button type="button" className="toolbar-action ghost tablet-tools-toggle" onClick={() => setIsToolsPanelOpen(true)}>
+              Outils
+            </button>
             <button type="button" className="toolbar-action ghost" onClick={undoHistory} disabled={historyPast.length === 0}>
               Annuler
             </button>
@@ -3697,12 +3744,13 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
           </div>
 
           <div
-            className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" ? "document-canvas-draw-mode" : ""}`}
+            className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" ? "document-canvas-draw-mode" : ""} ${advancedTool === "draw" || advancedTool === "select" || advancedTool === "move" ? "document-canvas-touch-locked" : ""}`}
             style={{ "--canvas-type-size": `${getDefaultCanvasFontSize(state.sheetStyle)}rem` } as ReactCSSProperties}
             ref={canvasRef}
             onDragOver={handleCanvasDragOver}
             onDragLeave={handleCanvasDragLeave}
             onDrop={handleCanvasDrop}
+            onTouchStart={(event) => handleSurfaceTouchStart(event, event.currentTarget)}
             onMouseDown={(event) => {
               if (canvasQuickMenu) {
                 event.preventDefault();
@@ -3770,6 +3818,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
               onDragOver={handleCanvasDragOver}
               onDragLeave={handleCanvasDragLeave}
               onDrop={handleCanvasDrop}
+              onTouchStart={(event) => handleSurfaceTouchStart(event, event.currentTarget, true)}
               onInput={syncText}
               onFocus={saveSelection}
               onMouseUp={saveSelection}
@@ -3796,6 +3845,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 }}
                 onMouseDown={(event) => {
                   startDragging("block", block.id, block.x, block.y, event);
+                }}
+                onTouchStart={(event) => {
+                  handleTouchDragStart("block", block.id, block.x, block.y, event);
                 }}
                 onDoubleClick={(event) => {
                   event.stopPropagation();
@@ -3831,6 +3883,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 onMouseDown={(event) => {
                   startDragging("symbol", symbol.id, symbol.x, symbol.y, event);
                 }}
+                onTouchStart={(event) => {
+                  handleTouchDragStart("symbol", symbol.id, symbol.x, symbol.y, event);
+                }}
               >
                 {symbol.content}
               </button>
@@ -3860,6 +3915,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                   }
 
                   startDragging("textBox", textBox.id, textBox.x, textBox.y, event);
+                }}
+                onTouchStart={(event) => {
+                  handleTouchDragStart("textBox", textBox.id, textBox.x, textBox.y, event, editingTextBoxId === textBox.id);
                 }}
                 onDoubleClick={(event) => {
                   event.stopPropagation();
@@ -3952,6 +4010,25 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
 
                 beginFreehandDrawing(event.clientX, event.clientY);
               }}
+              onTouchStart={(event) => {
+                if (advancedTool !== "draw" || event.touches.length === 0) {
+                  return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (editingBlock?.blockId) {
+                  finishBlockEditing(editingBlock.blockId);
+                }
+
+                if (editingTextBoxId) {
+                  closeFloatingTextEditing();
+                }
+
+                const touch = event.touches[0];
+                beginFreehandDrawing(touch.clientX, touch.clientY);
+              }}
             >
               {state.strokes.map((stroke) => {
                 const strokeBounds = getStrokeBounds(stroke.points);
@@ -3970,6 +4047,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                       }
 
                       startDragging("stroke", stroke.id, strokeBounds.x, strokeBounds.y, event);
+                    }}
+                    onTouchStart={(event) => {
+                      handleTouchDragStart("stroke", stroke.id, strokeBounds.x, strokeBounds.y, event, advancedTool === "draw");
                     }}
                   >
                     <path className="canvas-draw-hit" d={createStrokePath(stroke.points)} fill="none" />

@@ -85,6 +85,10 @@ button {
   backdrop-filter: blur(18px);
 }
 
+.tools-drawer-backdrop {
+  display: none;
+}
+
 .editor-stage {
   min-height: calc(100vh - 1.5rem);
   padding: 1rem;
@@ -100,8 +104,8 @@ button {
   gap: 0.8rem;
   flex-wrap: wrap;
   margin-bottom: 0.9rem;
-  padding: 0.75rem 0.9rem;
-  border-radius: 20px;
+  padding: 0.38rem 0.55rem;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.78);
   background: rgba(255, 251, 244, 0.9);
   box-shadow: 0 18px 36px rgba(58, 41, 17, 0.08);
@@ -111,12 +115,41 @@ button {
 .sheet-action-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.4rem;
+}
+
+.sheet-action-bar .toolbar-action {
+  min-height: 34px;
+  padding: 0.42rem 0.78rem;
+  font-size: 0.9rem;
+}
+
+.sheet-tool-button {
+  min-width: 2.4rem;
+  padding-inline: 0.6rem;
+}
+
+.sheet-tool-button-active {
+  border-color: rgba(217, 119, 69, 0.78);
+  box-shadow: 0 0 0 2px rgba(217, 119, 69, 0.18);
+}
+
+.selection-icon {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px dashed currentColor;
+  border-radius: 0.18rem;
+}
+
+.tablet-tools-toggle {
+  display: none;
 }
 
 .top-toolbar-inner {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  align-content: start;
+  grid-auto-rows: max-content;
   gap: 0.8rem;
   height: 100%;
   overflow-y: auto;
@@ -127,7 +160,7 @@ button {
 
 .sidebar-block {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.5rem;
   align-content: start;
 }
 
@@ -164,8 +197,8 @@ button {
 }
 
 .toolbar-row-secondary {
-  padding: 0.7rem 0.75rem 0.75rem;
-  border-radius: 20px;
+  padding: 0.55rem 0.65rem 0.6rem;
+  border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.76);
   background: rgba(255, 255, 255, 0.58);
 }
@@ -179,7 +212,7 @@ button {
 }
 
 .toolbar-row-format {
-  padding: 0.7rem 0.85rem;
+  padding: 0.55rem 0.65rem 0.6rem;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.76);
   background: rgba(255, 255, 255, 0.58);
@@ -752,7 +785,7 @@ input {
 .editor-local-toolbar-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
 }
 
@@ -1374,10 +1407,30 @@ input {
   }
 
   .top-toolbar {
+    position: fixed;
     top: 0;
-    height: auto;
-    max-height: none;
-    padding: 0.7rem 0.8rem;
+    left: 0;
+    width: min(24rem, 88vw);
+    height: 100vh;
+    max-height: 100vh;
+    padding: 0.85rem;
+    border-radius: 0 28px 28px 0;
+    transform: translateX(calc(-100% - 1rem));
+    transition: transform 180ms ease;
+    z-index: 40;
+  }
+
+  .top-toolbar-open {
+    transform: translateX(0);
+  }
+
+  .tools-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    display: block;
+    border: none;
+    background: rgba(31, 45, 61, 0.2);
+    z-index: 35;
   }
 
   .editor-stage {
@@ -1385,16 +1438,13 @@ input {
   }
 
   .top-toolbar-inner {
-    grid-template-rows: none;
-    height: auto;
-    overflow-y: visible;
-    padding-right: 0;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 0.15rem;
   }
 
-  .toolbar-popover-shell {
-    top: calc(100% + 0.35rem);
-    left: 0;
-    width: min(30rem, calc(100vw - 1rem));
+  .tablet-tools-toggle {
+    display: inline-flex;
   }
 }
 
@@ -1476,7 +1526,7 @@ input {
 
   .sheet-action-bar {
     top: 0.5rem;
-    padding: 0.7rem 0.75rem;
+    padding: 0.36rem 0.5rem;
   }
 
   .sheet-action-group {
@@ -1628,6 +1678,10 @@ input {
 
 .document-canvas-draw-mode {
   cursor: crosshair;
+}
+
+.document-canvas-touch-locked {
+  touch-action: none;
 }
 
 .document-canvas-drop-active {
