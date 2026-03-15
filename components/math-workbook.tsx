@@ -286,8 +286,11 @@ const INLINE_SHORTCUT_GROUPS: InlineShortcutGroup[] = [
     items: [
       { id: "equal", label: "=", hint: "Ajoute =", content: " = ", modes: ["college", "lycee"] },
       { id: "neq", label: "≠", hint: "Ajoute ≠", content: " ≠ ", modes: ["college", "lycee"] },
+      { id: "lt", label: "<", hint: "Inférieur à", content: " < ", modes: ["college", "lycee"] },
+      { id: "gt", label: ">", hint: "Supérieur à", content: " > ", modes: ["college", "lycee"] },
       { id: "leq", label: "≤", hint: "Inférieur ou égal", content: " ≤ ", modes: ["college", "lycee"] },
       { id: "geq", label: "≥", hint: "Supérieur ou égal", content: " ≥ ", modes: ["college", "lycee"] },
+      { id: "minus", label: "-", hint: "Soustraire", content: " - ", modes: ["college", "lycee"] },
       { id: "times", label: "×", hint: "Multiplier", content: " × ", modes: ["college", "lycee"] },
       { id: "div", label: "÷", hint: "Diviser", content: " ÷ ", modes: ["college", "lycee"] },
       { id: "percent", label: "%", hint: "Pourcentage", content: "%", modes: ["college", "lycee"] },
@@ -814,6 +817,18 @@ export function MathWorkbook() {
   const activeStructuredTools = useMemo(
     () => STRUCTURED_TOOLS.filter((tool) => tool.modes.includes(state.mode)),
     [state.mode]
+  );
+  const textBoxShortcuts = useMemo(
+    () =>
+      activeInlineShortcuts.flatMap((group) =>
+        group.items.map((item) => ({
+          id: item.id,
+          label: item.label,
+          hint: item.hint,
+          content: item.content.trimStart()
+        }))
+      ),
+    [activeInlineShortcuts]
   );
   const selectedBlockId = selectedBlockIds.length === 1 && selectedSymbolIds.length === 0 && selectedTextBoxIds.length === 0 && selectedStrokeIds.length === 0 ? selectedBlockIds[0] : null;
   const selectedSymbolId = selectedSymbolIds.length === 1 && selectedBlockIds.length === 0 && selectedTextBoxIds.length === 0 && selectedStrokeIds.length === 0 ? selectedSymbolIds[0] : null;
@@ -1795,6 +1810,37 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     selection.addRange(range);
     selectionRef.current = range.cloneRange();
     syncText();
+  }
+
+  function insertIntoEditingTextBox(textBoxId: string, content: string) {
+    const input = textBoxNodeRefs.current[textBoxId]?.querySelector("input");
+    const currentTextBox = textBoxesRef.current.find((item) => item.id === textBoxId);
+
+    if (!input || !currentTextBox) {
+      return;
+    }
+
+    const start = input.selectionStart ?? currentTextBox.text.length;
+    const end = input.selectionEnd ?? start;
+    const nextText = `${currentTextBox.text.slice(0, start)}${content}${currentTextBox.text.slice(end)}`;
+    const nextCursor = start + content.length;
+    const minimumWidth = currentTextBox.variant === "note" ? 56 : 100;
+
+    updateTextBox(textBoxId, {
+      text: nextText,
+      width: Math.max(minimumWidth, getTextBoxWidth(nextText))
+    });
+
+    window.requestAnimationFrame(() => {
+      const nextInput = textBoxNodeRefs.current[textBoxId]?.querySelector("input");
+
+      if (!nextInput) {
+        return;
+      }
+
+      nextInput.focus();
+      nextInput.setSelectionRange(nextCursor, nextCursor);
+    });
   }
 
   function handlePaste(event: ReactClipboardEvent<HTMLDivElement>) {
@@ -3373,7 +3419,12 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
             onDragLeave={handleCanvasDragLeave}
             onDrop={handleCanvasDrop}
             onMouseDown={(event) => {
-              setCanvasQuickMenu(null);
+              if (canvasQuickMenu) {
+                event.preventDefault();
+                setCanvasQuickMenu(null);
+                return;
+              }
+
               const activeEditingBlockId = editingBlock?.blockId;
 
               if (activeEditingBlockId && shouldCloseEditingBlock(event.target)) {
@@ -3404,7 +3455,12 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
               contentEditable
               suppressContentEditableWarning
               onMouseDown={(event) => {
-                setCanvasQuickMenu(null);
+                if (canvasQuickMenu) {
+                  event.preventDefault();
+                  setCanvasQuickMenu(null);
+                  return;
+                }
+
                 const activeEditingBlockId = editingBlock?.blockId;
 
                 if (activeEditingBlockId && shouldCloseEditingBlock(event.target)) {
@@ -3526,45 +3582,61 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 }}
               >
                 {editingTextBoxId === textBox.id ? (
-                  <input
-                    type="text"
-                    className="floating-text-input"
-                    value={textBox.text}
-                    placeholder="Écris ici"
-                    onMouseDown={(event) => {
-                      setCanvasQuickMenu(null);
-                      event.stopPropagation();
-                      selectSingleTextBox(textBox.id);
-                    }}
-                    onFocus={() => {
-                      selectSingleTextBox(textBox.id);
-                    }}
-                    onChange={(event) => {
-                      const nextText = event.target.value;
-                      const minimumWidth = textBox.variant === "note" ? 56 : 100;
+                  <>
+                    <div className="floating-text-shortcuts" onMouseDown={(event) => event.stopPropagation()}>
+                      {textBoxShortcuts.map((shortcut) => (
+                        <button
+                          key={shortcut.id}
+                          type="button"
+                          className="floating-text-shortcut"
+                          title={shortcut.hint}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => insertIntoEditingTextBox(textBox.id, shortcut.content)}
+                        >
+                          {shortcut.label}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      className="floating-text-input"
+                      value={textBox.text}
+                      placeholder="Écris ici"
+                      onMouseDown={(event) => {
+                        setCanvasQuickMenu(null);
+                        event.stopPropagation();
+                        selectSingleTextBox(textBox.id);
+                      }}
+                      onFocus={() => {
+                        selectSingleTextBox(textBox.id);
+                      }}
+                      onChange={(event) => {
+                        const nextText = event.target.value;
+                        const minimumWidth = textBox.variant === "note" ? 56 : 100;
 
-                      updateTextBox(textBox.id, {
-                        text: nextText,
-                        width: Math.max(minimumWidth, getTextBoxWidth(nextText))
-                      });
-                    }}
-                    onBlur={(event) => {
-                      if (!event.currentTarget.value.trim()) {
-                        removeTextBox(textBox.id);
+                        updateTextBox(textBox.id, {
+                          text: nextText,
+                          width: Math.max(minimumWidth, getTextBoxWidth(nextText))
+                        });
+                      }}
+                      onBlur={(event) => {
+                        if (!event.currentTarget.value.trim()) {
+                          removeTextBox(textBox.id);
+                          setEditingTextBoxId(null);
+                          scheduleTransientHistoryCommit("edit");
+                          return;
+                        }
+
+                        updateTextBox(textBox.id, {
+                          text: event.currentTarget.value.trim(),
+                          width: Math.max(textBox.variant === "note" ? 56 : 36, getTextBoxWidth(event.currentTarget.value))
+                        });
                         setEditingTextBoxId(null);
+                        clearFloatingSelection();
                         scheduleTransientHistoryCommit("edit");
-                        return;
-                      }
-
-                      updateTextBox(textBox.id, {
-                        text: event.currentTarget.value.trim(),
-                        width: Math.max(textBox.variant === "note" ? 56 : 36, getTextBoxWidth(event.currentTarget.value))
-                      });
-                      setEditingTextBoxId(null);
-                      clearFloatingSelection();
-                      scheduleTransientHistoryCommit("edit");
-                    }}
-                  />
+                      }}
+                    />
+                  </>
                 ) : (
                   <div className="floating-text-content">
                     {textBox.text || "Zone de texte"}

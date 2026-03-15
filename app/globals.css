@@ -1585,6 +1585,35 @@ input {
   text-overflow: ellipsis;
 }
 
+.floating-text-shortcuts {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(92, 108, 129, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 10px 22px rgba(31, 45, 61, 0.1);
+}
+
+.floating-text-shortcut {
+  min-width: 1.8rem;
+  min-height: 1.8rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid rgba(92, 108, 129, 0.12);
+  border-radius: 9px;
+  background: rgba(255, 253, 249, 0.98);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .floating-text-content {
   min-width: 0;
   color: inherit;
