@@ -834,6 +834,17 @@ function getDivisionQuotientDigits(quotient: string) {
   return Math.max(1, digitsOnly.length);
 }
 
+function normalizeDivisionDecimalInput(value: string) {
+  const normalized = value.replace(/\./g, ",").replace(/[^0-9,]/g, "");
+  const firstCommaIndex = normalized.indexOf(",");
+
+  if (firstCommaIndex === -1) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, firstCommaIndex + 1)}${normalized.slice(firstCommaIndex + 1).replace(/,/g, "")}`;
+}
+
 function getDivisionMaxWorkLines(quotient: string) {
   return Math.max(8, getDivisionQuotientDigits(quotient) * 2 + 1);
 }
@@ -3443,10 +3454,10 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
             <input
               {...bindInlineInput(field)}
               value={value}
-              inputMode="numeric"
-              pattern="[0-9]*"
+              inputMode="decimal"
+              pattern="[0-9,]*"
               className={inputClassName}
-              onChange={(event) => updateInlineBlockField(block.id, field, event.target.value.replace(/\D+/g, ""))}
+              onChange={(event) => updateInlineBlockField(block.id, field, normalizeDivisionDecimalInput(event.target.value))}
             />
             {renderDivisionCellRow(value, columns, `${displayClassName} division-number-field-display`)}
           </div>
