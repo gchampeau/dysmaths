@@ -371,7 +371,7 @@ function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle): FloatingTextBox[]
   const fieldHeight = Math.max(24, fontSize * 22);
   const firstBaseline = metrics.originY + metrics.snapYStep;
   const secondBaseline = metrics.originY + metrics.snapYStep * 2;
-  const startX = sheetStyle === "seyes" ? cmToPx(5.1) : mmToPx(14);
+  const startX = (sheetStyle === "seyes" ? cmToPx(5.1) : mmToPx(14)) - 16;
   const dateX = mmToPx(145);
 
   return [
@@ -483,6 +483,8 @@ const INLINE_SHORTCUT_GROUPS: InlineShortcutGroup[] = [
       { id: "minus", label: "-", hint: "Soustraire", content: " - ", modes: ["college", "lycee"] },
       { id: "times", label: "×", hint: "Multiplier", content: " × ", modes: ["college", "lycee"] },
       { id: "div", label: "÷", hint: "Diviser", content: " ÷ ", modes: ["college", "lycee"] },
+      { id: "lbracket", label: "[", hint: "Crochet ouvrant", content: "[", modes: ["college", "lycee"] },
+      { id: "rbracket", label: "]", hint: "Crochet fermant", content: "]", modes: ["college", "lycee"] },
       { id: "percent", label: "%", hint: "Pourcentage", content: "%", modes: ["college", "lycee"] },
       { id: "pi", label: "π", hint: "Pi", content: "π", modes: ["college", "lycee"] }
     ]
@@ -2682,6 +2684,21 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     setEditingBlock({ blockId, field: field ?? getInlineStartField(block.type) });
   }
 
+  function beginBlockEditingAfterInsert(blockId: string, field: string, attempt = 0) {
+    window.requestAnimationFrame(() => {
+      const block = blocksRef.current.find((item) => item.id === blockId);
+
+      if (!block) {
+        if (attempt < 4) {
+          beginBlockEditingAfterInsert(blockId, field, attempt + 1);
+        }
+        return;
+      }
+
+      beginBlockEditing(blockId, field);
+    });
+  }
+
   function closeFloatingTextEditing() {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -2897,7 +2914,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
       ...current,
       blocks: [...current.blocks, block]
     }));
-    beginBlockEditing(block.id, getInlineStartField(type));
+    beginBlockEditingAfterInsert(block.id, getInlineStartField(type));
     setCanvasQuickMenu(null);
   }
 
@@ -3078,7 +3095,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
       ...current,
       blocks: [...current.blocks, block]
     }));
-    beginBlockEditing(block.id, getInlineStartField(type));
+    beginBlockEditingAfterInsert(block.id, getInlineStartField(type));
     setOpenMenu(null);
     setCanvasQuickMenu(null);
   }
@@ -3296,13 +3313,15 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
 
   function activateHighlightTool(highlightColor: string) {
     const nextHighlight = highlightColor || null;
+    const shouldDisableHighlight = advancedTool === "highlight" && nextHighlight !== null && state.activeHighlightColor === nextHighlight;
+    const resolvedHighlight = shouldDisableHighlight ? null : nextHighlight;
 
     setState((current) => ({
       ...current,
-      activeHighlightColor: nextHighlight
+      activeHighlightColor: resolvedHighlight
     }));
     setPendingInsertTool(null);
-    setAdvancedTool(nextHighlight ? "highlight" : null);
+    setAdvancedTool(resolvedHighlight ? "highlight" : null);
     setOpenMenu(null);
   }
 
@@ -4016,7 +4035,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
         ...current,
         blocks: [...current.blocks, block]
       }));
-      beginBlockEditing(block.id, getInlineStartField(payload.toolId));
+      beginBlockEditingAfterInsert(block.id, getInlineStartField(payload.toolId));
       return;
     }
 
@@ -5605,9 +5624,19 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
               onPaste={handlePaste}
             />
 
-            {(pendingInsertTool || advancedTool === "highlight") && insertCursorPreview.visible ? (
+            {pendingInsertTool?.kind === "shortcut" && insertCursorPreview.visible ? (
               <div
-                className={`canvas-insert-cursor ${advancedTool === "highlight" ? "canvas-insert-cursor-highlighter" : ""}`}
+                className="canvas-insert-anchor"
+                style={{ left: `${insertCursorPreview.x}px`, top: `${insertCursorPreview.y}px`, color: state.activeColor }}
+                aria-hidden="true"
+              >
+                {renderShortcutGlyph(findShortcutById(pendingInsertTool.shortcutId) ?? { id: pendingInsertTool.shortcutId, label: "?" })}
+              </div>
+            ) : null}
+
+            {((pendingInsertTool && pendingInsertTool.kind !== "shortcut") || advancedTool === "highlight") && insertCursorPreview.visible ? (
+              <div
+                className={`canvas-insert-cursor ${advancedTool === "highlight" ? "canvas-insert-cursor-highlighter" : ""} ${pendingInsertTool?.kind === "shortcut" ? "canvas-insert-cursor-symbol" : ""}`}
                 style={{
                   left: `${insertCursorPreview.x}px`,
                   top: `${insertCursorPreview.y}px`,
