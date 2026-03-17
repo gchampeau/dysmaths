@@ -1325,7 +1325,7 @@ function renderColumnArithmeticPreview(block: AdditionBlock | SubtractionBlock |
     return (
       <div className="addition-line addition-line-carry">
         <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-        {renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row", undefined, {
+        {renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row addition-row-preview", undefined, {
           field: carryField,
           struckCells: block.struckCells
         })}
@@ -1343,21 +1343,21 @@ function renderColumnArithmeticPreview(block: AdditionBlock | SubtractionBlock |
           {topCarryOverlay ? <div className="addition-line-carry-overlay">{topCarryOverlay}</div> : null}
           <div className="addition-line">
             <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderDivisionCellRow(block.top, columns, "addition-row", "end", undefined, { field: "top", struckCells: block.struckCells })}
+            {renderDivisionCellRow(block.top, columns, "addition-row addition-row-preview", "end", undefined, { field: "top", struckCells: block.struckCells })}
           </div>
         </div>
         <div className={`addition-line-stack ${bottomCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
           {bottomCarryOverlay ? <div className="addition-line-carry-overlay">{bottomCarryOverlay}</div> : null}
           <div className="addition-line">
             <span className="addition-sign">{operator}</span>
-            {renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation", "end", undefined, { field: "bottom", struckCells: block.struckCells })}
+            {renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation addition-row-preview", "end", undefined, { field: "bottom", struckCells: block.struckCells })}
           </div>
         </div>
         <div className={`addition-line-stack ${resultCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
           {resultCarryOverlay ? <div className="addition-line-carry-overlay">{resultCarryOverlay}</div> : null}
           <div className="addition-line">
             <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderDivisionCellRow(block.result, columns, "addition-row addition-row-result", "end", undefined, { field: "result", struckCells: block.struckCells })}
+            {renderDivisionCellRow(block.result, columns, "addition-row addition-row-result addition-row-preview", "end", undefined, { field: "result", struckCells: block.struckCells })}
           </div>
         </div>
       </div>
@@ -1395,7 +1395,7 @@ function renderMathPreview(block: MathBlock) {
           <div className="division-left-column">
             <div className="division-work-line division-work-line-head">
               <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />
-              {renderDivisionCellRow(block.dividend, leftColumns, "division-dividend", "start", undefined, { field: "dividend", struckCells: block.struckCells })}
+              {renderDivisionCellRow(block.dividend, leftColumns, "division-dividend division-row-preview", "start", undefined, { field: "dividend", struckCells: block.struckCells })}
             </div>
             <div className="division-work-grid">
               {workLines.map((line, index) => (
@@ -1404,14 +1404,14 @@ function renderMathPreview(block: MathBlock) {
                   className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
                 >
                   {index % 2 === 0 ? <span className="division-work-minus">-</span> : <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />}
-                  {renderDivisionCellRow(line, leftColumns, "division-workpad", "start", undefined, { field: `work:${index}`, struckCells: block.struckCells })}
+                  {renderDivisionCellRow(line, leftColumns, "division-workpad division-row-preview", "start", undefined, { field: `work:${index}`, struckCells: block.struckCells })}
                 </div>
               ))}
             </div>
           </div>
           <div className="division-right-column">
-            {renderDivisionCellRow(block.divisor, divisorColumns, "division-divisor", "start", undefined, { field: "divisor", struckCells: block.struckCells })}
-            {renderDivisionCellRow(block.quotient, quotientColumns, "division-quotient", "start", undefined, { field: "quotient", struckCells: block.struckCells })}
+            {renderDivisionCellRow(block.divisor, divisorColumns, "division-divisor division-row-preview", "start", undefined, { field: "divisor", struckCells: block.struckCells })}
+            {renderDivisionCellRow(block.quotient, quotientColumns, "division-quotient division-row-preview", "start", undefined, { field: "quotient", struckCells: block.struckCells })}
           </div>
         </div>
         {block.caption ? <p className="math-caption">{block.caption}</p> : null}
@@ -3984,7 +3984,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
             {renderBlockPreviewButton(
               block.id,
               carryField,
-              renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row", undefined, {
+              renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row addition-row-preview", undefined, {
                 field: carryField,
                 struckCells: block.struckCells
               }),
@@ -4008,21 +4008,21 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
             {topCarryOverlay ? <div className="addition-line-carry-overlay">{topCarryOverlay}</div> : null}
             <div className="addition-line">
               <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-              {renderBlockPreviewButton(block.id, "top", renderDivisionCellRow(block.top, columns, "addition-row", "end", undefined, { field: "top", struckCells: block.struckCells }), "addition-row-button")}
+              {renderBlockPreviewButton(block.id, "top", renderDivisionCellRow(block.top, columns, "addition-row addition-row-preview", "end", undefined, { field: "top", struckCells: block.struckCells }), "addition-row-button")}
             </div>
           </div>
           <div className={`addition-line-stack ${bottomCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
             {bottomCarryOverlay ? <div className="addition-line-carry-overlay">{bottomCarryOverlay}</div> : null}
             <div className="addition-line">
               <span className="addition-sign">{operator}</span>
-              {renderBlockPreviewButton(block.id, "bottom", renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation", "end", undefined, { field: "bottom", struckCells: block.struckCells }), "addition-row-button")}
+              {renderBlockPreviewButton(block.id, "bottom", renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation addition-row-preview", "end", undefined, { field: "bottom", struckCells: block.struckCells }), "addition-row-button")}
             </div>
           </div>
           <div className={`addition-line-stack ${resultCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
             {resultCarryOverlay ? <div className="addition-line-carry-overlay">{resultCarryOverlay}</div> : null}
             <div className="addition-line">
               <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-              {renderBlockPreviewButton(block.id, "result", renderDivisionCellRow(block.result, columns, "addition-row addition-row-result", "end", undefined, { field: "result", struckCells: block.struckCells }), "addition-row-button")}
+              {renderBlockPreviewButton(block.id, "result", renderDivisionCellRow(block.result, columns, "addition-row addition-row-result addition-row-preview", "end", undefined, { field: "result", struckCells: block.struckCells }), "addition-row-button")}
             </div>
           </div>
         </div>
@@ -4060,7 +4060,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
             <div className="division-left-column">
               <div className="division-work-line division-work-line-head">
                 <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />
-                {renderBlockPreviewButton(block.id, "dividend", renderDivisionCellRow(block.dividend, leftColumns, "division-dividend", "start", undefined, { field: "dividend", struckCells: block.struckCells }), "division-row-button")}
+                {renderBlockPreviewButton(block.id, "dividend", renderDivisionCellRow(block.dividend, leftColumns, "division-dividend division-row-preview", "start", undefined, { field: "dividend", struckCells: block.struckCells }), "division-row-button")}
               </div>
               <div className="division-work-grid">
                 {workLines.map((line, index) => (
@@ -4069,14 +4069,14 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                     className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
                   >
                     {index % 2 === 0 ? <span className="division-work-minus">-</span> : <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />}
-                    {renderBlockPreviewButton(block.id, `work:${index}`, renderDivisionCellRow(line, leftColumns, "division-workpad", "start", undefined, { field: `work:${index}`, struckCells: block.struckCells }), "division-row-button")}
+                    {renderBlockPreviewButton(block.id, `work:${index}`, renderDivisionCellRow(line, leftColumns, "division-workpad division-row-preview", "start", undefined, { field: `work:${index}`, struckCells: block.struckCells }), "division-row-button")}
                   </div>
                 ))}
               </div>
             </div>
             <div className="division-right-column">
-              {renderBlockPreviewButton(block.id, "divisor", renderDivisionCellRow(block.divisor, divisorColumns, "division-divisor", "start", undefined, { field: "divisor", struckCells: block.struckCells }), "division-row-button")}
-              {renderBlockPreviewButton(block.id, "quotient", renderDivisionCellRow(block.quotient, quotientColumns, "division-quotient", "start", undefined, { field: "quotient", struckCells: block.struckCells }), "division-row-button")}
+              {renderBlockPreviewButton(block.id, "divisor", renderDivisionCellRow(block.divisor, divisorColumns, "division-divisor division-row-preview", "start", undefined, { field: "divisor", struckCells: block.struckCells }), "division-row-button")}
+              {renderBlockPreviewButton(block.id, "quotient", renderDivisionCellRow(block.quotient, quotientColumns, "division-quotient division-row-preview", "start", undefined, { field: "quotient", struckCells: block.struckCells }), "division-row-button")}
             </div>
           </div>
           {block.caption ? <p className="math-caption">{block.caption}</p> : null}
