@@ -1033,8 +1033,6 @@ input {
 }
 
 .addition-line {
-  position: relative;
-  z-index: 0;
   display: grid;
   grid-template-columns: 1rem max-content;
   align-items: center;
@@ -1042,8 +1040,22 @@ input {
   column-gap: 0.32rem;
 }
 
-.addition-line-carry {
+.addition-line-stack {
+  position: relative;
+}
+
+.addition-line-stack-with-carry {
+  padding-top: calc((var(--division-cell-size) * 0.74) + 2px);
+}
+
+.addition-line-carry-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: 2;
+}
+
+.addition-line-carry {
   margin-bottom: 0;
 }
 
@@ -1068,21 +1080,36 @@ input {
 .addition-carry-row .division-cell {
   min-height: calc(var(--division-cell-size) * 0.74);
   height: calc(var(--division-cell-size) * 0.74);
-  border-color: rgba(31, 45, 61, 0.18);
-  color: rgba(31, 45, 61, 0.68);
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, currentColor 48%, white);
+  background: color-mix(in srgb, white 97%, currentColor 3%);
+  box-shadow: none;
+  color: rgba(31, 45, 61, 0.8);
   font-size: 0.84em;
   justify-content: flex-start;
   align-items: flex-start;
-  padding-top: 0.08rem;
-  padding-left: 0.18rem;
+  padding-top: calc(0.4rem - 2px);
+  padding-left: 0.14rem;
+  overflow: hidden;
+}
+
+.addition-carry-row .division-cell-target {
+  border-color: rgba(217, 119, 69, 0.5);
+  background: rgba(255, 239, 221, 0.82);
+  box-shadow: 0 0 0 2px rgba(217, 119, 69, 0.18);
+}
+
+.addition-carry-row .division-cell-target::after {
+  display: none;
 }
 
 .addition-carry-cell {
+  position: relative;
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-  padding-top: 0.08rem;
-  padding-left: 0.18rem;
+  padding-top: calc(0.4rem - 2px);
+  padding-left: 0.14rem;
 }
 
 .addition-carry-cell-target {
@@ -1094,15 +1121,40 @@ input {
   padding: 0;
 }
 
+.addition-carry-cell-editing::after {
+  content: "";
+  position: absolute;
+  left: 0.55rem;
+  top: calc(0.42rem - 1px);
+  width: 2px;
+  height: 58%;
+  background: rgba(31, 45, 61, 0.9);
+  border-radius: 999px;
+  animation: division-caret-blink 1s steps(1, end) infinite;
+  pointer-events: none;
+}
+
+.addition-carry-cell-editing:not(:focus-within)::after {
+  display: none;
+}
+
+.addition-carry-row .addition-carry-cell-editing.division-cell-target {
+  border-color: rgba(217, 119, 69, 0.5);
+  background: rgba(255, 239, 221, 0.82);
+  box-shadow: 0 0 0 2px rgba(217, 119, 69, 0.18);
+}
+
 .addition-carry-input-ghost {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-  padding-top: 0.08rem;
-  padding-left: 0.18rem;
-  color: currentColor;
+  padding-top: calc(0.4rem - 1px);
+  padding-left: 0.14rem;
+  color: rgba(31, 45, 61, 0.88);
+  font: inherit;
   font-size: 0.84em;
   font-weight: 700;
   line-height: 1;
@@ -1112,19 +1164,26 @@ input {
 .addition-carry-input {
   position: absolute;
   inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  padding: 0.08rem 0 0 0.18rem;
+  padding: 0.04rem 0 0 0.14rem;
   border: none;
   background: transparent;
   color: transparent;
   font: inherit;
-  font-size: 0.84em;
+  font-size: 1px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 0;
   text-align: left;
-  caret-color: currentColor;
+  caret-color: transparent;
   -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  opacity: 0;
+}
+
+.addition-carry-cell-editing .addition-carry-input {
+  caret-color: transparent;
 }
 
 .addition-carry-input:focus {
@@ -1133,7 +1192,6 @@ input {
 
 .addition-carry-input::selection {
   background: transparent;
-  color: transparent;
 }
 
 .addition-row-operation {
@@ -1148,7 +1206,6 @@ input {
 
 .addition-number-field {
   position: relative;
-  z-index: 1;
   width: calc((var(--division-columns) * var(--division-cell-size)) + ((var(--division-columns) - 1) * var(--division-cell-gap)));
 }
 
@@ -1170,12 +1227,9 @@ input {
 
 .addition-line-carry-toggle {
   min-height: calc(var(--division-cell-size) * 0.82);
-  z-index: 3;
 }
 
 .addition-carry-toggle-button {
-  position: relative;
-  z-index: 3;
   pointer-events: auto;
   justify-self: end;
   padding: 0.08rem 0.42rem;

@@ -1026,6 +1026,35 @@ function setDivisionCellValue(value: string, index: number, nextCharacter: strin
   return characters.join("");
 }
 
+function setDivisionCellValues(value: string, startIndex: number, nextCharacters: string[], maxColumns: number) {
+  const characters = Array.from(value);
+  let insertedCount = 0;
+
+  nextCharacters.forEach((nextCharacter, offset) => {
+    const targetIndex = startIndex + offset;
+
+    if (targetIndex >= maxColumns) {
+      return;
+    }
+
+    while (characters.length <= targetIndex) {
+      characters.push("");
+    }
+
+    characters[targetIndex] = nextCharacter;
+    insertedCount += 1;
+  });
+
+  while (characters.length > 0 && characters[characters.length - 1] === "") {
+    characters.pop();
+  }
+
+  return {
+    value: characters.join(""),
+    insertedCount
+  };
+}
+
 function getDivisionLeftColumns(block: DivisionBlock) {
   const workLines = getDivisionWorkLines(block.work);
   return Math.max(3, block.dividend.trim().length, ...workLines.map((line) => line.length));
@@ -1096,6 +1125,16 @@ function getArithmeticCarryCells(block: AdditionBlock | SubtractionBlock | Multi
 
 function getArithmeticCarryCell(cells: string[], offsetFromRight: number) {
   return cells[offsetFromRight] ?? "";
+}
+
+function getLastFilledArithmeticCarryOffset(cells: string[]) {
+  for (let index = cells.length - 1; index >= 0; index -= 1) {
+    if ((cells[index] ?? "").trim().length > 0) {
+      return index;
+    }
+  }
+
+  return null;
 }
 
 function setArithmeticCarryCell(cells: string[], offsetFromRight: number, nextValue: string) {
@@ -1176,39 +1215,47 @@ function renderArithmeticCarryRow(
 function renderColumnArithmeticPreview(block: AdditionBlock | SubtractionBlock | MultiplicationBlock) {
   const columns = getColumnArithmeticColumns(block);
   const operator = getArithmeticOperator(block);
+  const renderCarryOverlay = (line: ArithmeticLineField) => {
+    const carryCells = getArithmeticCarryCells(block, line);
+
+    if (!hasArithmeticCarryCells(carryCells)) {
+      return null;
+    }
+
+    return (
+      <div className="addition-line addition-line-carry">
+        <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
+        {renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row")}
+      </div>
+    );
+  };
+  const topCarryOverlay = renderCarryOverlay("top");
+  const bottomCarryOverlay = renderCarryOverlay("bottom");
+  const resultCarryOverlay = renderCarryOverlay("result");
 
   return (
     <div className="math-layout addition-layout">
       <div className="addition-preview">
-        {hasArithmeticCarryCells(getArithmeticCarryCells(block, "top")) ? (
-          <div className="addition-line addition-line-carry">
+        <div className={`addition-line-stack ${topCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
+          {topCarryOverlay ? <div className="addition-line-carry-overlay">{topCarryOverlay}</div> : null}
+          <div className="addition-line">
             <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderArithmeticCarryRow(getArithmeticCarryCells(block, "top"), columns, "addition-row addition-carry-row")}
+            {renderDivisionCellRow(block.top, columns, "addition-row", "end")}
           </div>
-        ) : null}
-        <div className="addition-line">
-          <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-          {renderDivisionCellRow(block.top, columns, "addition-row", "end")}
         </div>
-        {hasArithmeticCarryCells(getArithmeticCarryCells(block, "bottom")) ? (
-          <div className="addition-line addition-line-carry">
-            <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderArithmeticCarryRow(getArithmeticCarryCells(block, "bottom"), columns, "addition-row addition-carry-row")}
+        <div className={`addition-line-stack ${bottomCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
+          {bottomCarryOverlay ? <div className="addition-line-carry-overlay">{bottomCarryOverlay}</div> : null}
+          <div className="addition-line">
+            <span className="addition-sign">{operator}</span>
+            {renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation", "end")}
           </div>
-        ) : null}
-        <div className="addition-line">
-          <span className="addition-sign">{operator}</span>
-          {renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation", "end")}
         </div>
-        {hasArithmeticCarryCells(getArithmeticCarryCells(block, "result")) ? (
-          <div className="addition-line addition-line-carry">
+        <div className={`addition-line-stack ${resultCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
+          {resultCarryOverlay ? <div className="addition-line-carry-overlay">{resultCarryOverlay}</div> : null}
+          <div className="addition-line">
             <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderArithmeticCarryRow(getArithmeticCarryCells(block, "result"), columns, "addition-row addition-carry-row")}
+            {renderDivisionCellRow(block.result, columns, "addition-row addition-row-result", "end")}
           </div>
-        ) : null}
-        <div className="addition-line">
-          <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-          {renderDivisionCellRow(block.result, columns, "addition-row addition-row-result", "end")}
         </div>
       </div>
       {block.caption ? <p className="math-caption">{block.caption}</p> : null}
@@ -1450,6 +1497,7 @@ export function MathWorkbook() {
   const toolbarDragUntilRef = useRef(0);
   const toolbarDragMetaRef = useRef<ToolbarDragMeta | null>(null);
   const advancedToolRef = useRef<AdvancedTool>(null);
+  const editingBlockRef = useRef<EditingBlockState>(null);
   const blockNodeRefs = useRef<Record<string, HTMLElement | null>>({});
   const symbolNodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const textBoxNodeRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -1623,6 +1671,10 @@ export function MathWorkbook() {
   }, [advancedTool]);
 
   useEffect(() => {
+    editingBlockRef.current = editingBlock;
+  }, [editingBlock]);
+
+  useEffect(() => {
     if (pendingInsertTool) {
       setAdvancedTool(null);
       setCanvasQuickMenu(null);
@@ -1693,15 +1745,70 @@ export function MathWorkbook() {
       return;
     }
 
+    const block = blocksRef.current.find((item) => item.id === editingBlock.blockId);
+
+    if (block && isColumnArithmeticBlock(block) && (editingBlock.field === "carryTop" || editingBlock.field === "carryBottom" || editingBlock.field === "carryResult")) {
+      const carryField = editingBlock.field;
+      const line = getArithmeticLineForCarryField(carryField);
+      const existingOffset = getLastFilledArithmeticCarryOffset(block[carryField]);
+
+      if (existingOffset !== null) {
+        setEditingBlock({ blockId: block.id, field: `${carryField}:${existingOffset}` });
+        return;
+      }
+
+      const columns = getColumnArithmeticColumns(block);
+      const lineValue = block[line];
+      const caretKey = `${block.id}:${line}`;
+      const caretPosition = numericFieldCaretPositions[caretKey] ?? Array.from(lineValue).length;
+      const targetCellIndex = getAlignedCaretCellIndex(lineValue, columns, "end", caretPosition);
+      const targetOffset = columns - 1 - targetCellIndex;
+
+      setEditingBlock({ blockId: block.id, field: `${carryField}:${targetOffset}` });
+      return;
+    }
+
     const input = blockInputRefs.current[editingBlock.blockId]?.[editingBlock.field];
 
     if (!input) {
       return;
     }
 
-    input.focus();
+    if (document.activeElement !== input) {
+      input.focus();
+    }
+
+    const isArithmeticNumericField =
+      block &&
+      isColumnArithmeticBlock(block) &&
+      (editingBlock.field === "top" || editingBlock.field === "bottom" || editingBlock.field === "result");
+    const isDivisionNumericField =
+      block &&
+      block.type === "division" &&
+      (editingBlock.field === "dividend" || editingBlock.field === "divisor" || editingBlock.field === "quotient");
+
+    if (isArithmeticNumericField || isDivisionNumericField) {
+      let numericValue = "";
+
+      if (isArithmeticNumericField) {
+        numericValue = block[editingBlock.field as ArithmeticLineField];
+      } else if (isDivisionNumericField) {
+        numericValue = block[editingBlock.field as "dividend" | "divisor" | "quotient"];
+      }
+
+      const caretKey = `${editingBlock.blockId}:${editingBlock.field}`;
+      const caretPosition = numericFieldCaretPositions[caretKey] ?? Array.from(numericValue).length;
+
+      input.setSelectionRange(caretPosition, caretPosition);
+      return;
+    }
+
+    if (document.activeElement === input) {
+      return;
+    }
+
     input.select();
-  }, [editingBlock]);
+  }, [editingBlock, numericFieldCaretPositions]);
 
   useEffect(() => {
     const element = editorRef.current;
@@ -3735,36 +3842,53 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     const operator = getArithmeticOperator(block);
     const renderCarryPreview = (line: ArithmeticLineField) => {
       const carryCells = getArithmeticCarryCells(block, line);
+      const carryField = getCarryFieldForArithmeticLine(line);
+      const activeOffset = getLastFilledArithmeticCarryOffset(carryCells);
 
       if (hasArithmeticCarryCells(carryCells)) {
         return (
           <div className="addition-line addition-line-carry">
             <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderBlockPreviewButton(block.id, getCarryFieldForArithmeticLine(line), renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row"), "addition-row-button")}
+            {renderBlockPreviewButton(
+              block.id,
+              carryField,
+              renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row"),
+              "addition-row-button",
+              () => beginBlockEditing(block.id, activeOffset === null ? carryField : `${carryField}:${activeOffset}`)
+            )}
           </div>
         );
       }
 
       return null;
     };
+    const topCarryOverlay = renderCarryPreview("top");
+    const bottomCarryOverlay = renderCarryPreview("bottom");
+    const resultCarryOverlay = renderCarryPreview("result");
 
     return (
       <div className="math-layout addition-layout">
         <div className="addition-preview">
-          {renderCarryPreview("top")}
-          <div className="addition-line">
-            <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderBlockPreviewButton(block.id, "top", renderDivisionCellRow(block.top, columns, "addition-row", "end"), "addition-row-button")}
+          <div className={`addition-line-stack ${topCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
+            {topCarryOverlay ? <div className="addition-line-carry-overlay">{topCarryOverlay}</div> : null}
+            <div className="addition-line">
+              <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
+              {renderBlockPreviewButton(block.id, "top", renderDivisionCellRow(block.top, columns, "addition-row", "end"), "addition-row-button")}
+            </div>
           </div>
-          {renderCarryPreview("bottom")}
-          <div className="addition-line">
-            <span className="addition-sign">{operator}</span>
-            {renderBlockPreviewButton(block.id, "bottom", renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation", "end"), "addition-row-button")}
+          <div className={`addition-line-stack ${bottomCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
+            {bottomCarryOverlay ? <div className="addition-line-carry-overlay">{bottomCarryOverlay}</div> : null}
+            <div className="addition-line">
+              <span className="addition-sign">{operator}</span>
+              {renderBlockPreviewButton(block.id, "bottom", renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation", "end"), "addition-row-button")}
+            </div>
           </div>
-          {renderCarryPreview("result")}
-          <div className="addition-line">
-            <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderBlockPreviewButton(block.id, "result", renderDivisionCellRow(block.result, columns, "addition-row addition-row-result", "end"), "addition-row-button")}
+          <div className={`addition-line-stack ${resultCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
+            {resultCarryOverlay ? <div className="addition-line-carry-overlay">{resultCarryOverlay}</div> : null}
+            <div className="addition-line">
+              <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
+              {renderBlockPreviewButton(block.id, "result", renderDivisionCellRow(block.result, columns, "addition-row addition-row-result", "end"), "addition-row-button")}
+            </div>
           </div>
         </div>
         {block.caption ? <p className="math-caption">{block.caption}</p> : null}
@@ -3869,13 +3993,13 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
           return;
         }
 
-        if (editingBlock?.field === field) {
-          setTimeout(() => {
-            if (editingBlock?.field === field) {
-              finishBlockEditing(block.id);
-            }
-          }, 0);
-        }
+        setTimeout(() => {
+          const latestEditingBlock = editingBlockRef.current;
+
+          if (latestEditingBlock?.blockId === block.id && latestEditingBlock.field === field) {
+            finishBlockEditing(block.id);
+          }
+        }, 0);
       }
     });
 
@@ -3889,6 +4013,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
         return getAlignedCaretCellIndex(lineValue, columns, "end", caretPosition);
       };
       const activeLine = currentField === "top" || currentField?.startsWith("carryTop") ? "top" : currentField === "bottom" || currentField?.startsWith("carryBottom") ? "bottom" : currentField === "result" || currentField?.startsWith("carryResult") ? "result" : null;
+      const activateCarryEditing = (field: ArithmeticCarryField, offsetFromRight: number) => {
+        setEditingBlock({ blockId: arithmeticBlock.id, field: `${field}:${offsetFromRight}` });
+      };
       const renderArithmeticNumericField = (
         field: ArithmeticCarryField | ArithmeticLineField,
         value: string,
@@ -3971,7 +4098,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                           maxLength={1}
                           className="addition-carry-input"
                           onMouseDown={(event) => event.stopPropagation()}
-                          onFocus={() => setEditingBlock({ blockId: arithmeticBlock.id, field: `${carryField}:${offsetFromRight}` })}
+                          onFocus={() => activateCarryEditing(carryField, offsetFromRight)}
                           onBlur={(event) => {
                             const nextTarget = event.relatedTarget as Node | null;
 
@@ -3980,7 +4107,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                             }
 
                             setTimeout(() => {
-                              if (editingBlock?.field === `${carryField}:${offsetFromRight}`) {
+                              const latestEditingBlock = editingBlockRef.current;
+
+                              if (latestEditingBlock?.blockId === arithmeticBlock.id && latestEditingBlock.field === `${carryField}:${offsetFromRight}`) {
                                 finishBlockEditing(arithmeticBlock.id);
                               }
                             }, 0);
@@ -4015,8 +4144,12 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                       onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
+                        activateCarryEditing(carryField, offsetFromRight);
                       }}
-                      onClick={() => setEditingBlock({ blockId: arithmeticBlock.id, field: `${carryField}:${offsetFromRight}` })}
+                      onTouchStart={(event) => {
+                        event.stopPropagation();
+                        activateCarryEditing(carryField, offsetFromRight);
+                      }}
                     >
                       {carryCellValue}
                     </button>
@@ -4040,32 +4173,45 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
               onMouseDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                activateCarryEditing(carryField, targetOffset);
               }}
-              onClick={() => setEditingBlock({ blockId: arithmeticBlock.id, field: `${carryField}:${targetOffset}` })}
+              onTouchStart={(event) => {
+                event.stopPropagation();
+                activateCarryEditing(carryField, targetOffset);
+              }}
             >
               + retenue
             </button>
           </div>
         );
       };
+      const topCarryControl = renderCarryControl("top");
+      const bottomCarryControl = renderCarryControl("bottom");
+      const resultCarryControl = renderCarryControl("result");
 
       return (
         <div className="math-layout addition-layout">
           <div className="addition-preview">
-            {renderCarryControl("top")}
-            <div className="addition-line">
-              <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-              {renderArithmeticNumericField("top", arithmeticBlock.top, "addition-row")}
+            <div className={`addition-line-stack ${topCarryControl ? "addition-line-stack-with-carry" : ""}`}>
+              {topCarryControl ? <div className="addition-line-carry-overlay">{topCarryControl}</div> : null}
+              <div className="addition-line">
+                <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
+                {renderArithmeticNumericField("top", arithmeticBlock.top, "addition-row")}
+              </div>
             </div>
-            {renderCarryControl("bottom")}
-            <div className="addition-line">
-              <span className="addition-sign">{operator}</span>
-              {renderArithmeticNumericField("bottom", arithmeticBlock.bottom, "addition-row addition-row-operation")}
+            <div className={`addition-line-stack ${bottomCarryControl ? "addition-line-stack-with-carry" : ""}`}>
+              {bottomCarryControl ? <div className="addition-line-carry-overlay">{bottomCarryControl}</div> : null}
+              <div className="addition-line">
+                <span className="addition-sign">{operator}</span>
+                {renderArithmeticNumericField("bottom", arithmeticBlock.bottom, "addition-row addition-row-operation")}
+              </div>
             </div>
-            {renderCarryControl("result")}
-            <div className="addition-line">
-              <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-              {renderArithmeticNumericField("result", arithmeticBlock.result, "addition-row addition-row-result")}
+            <div className={`addition-line-stack ${resultCarryControl ? "addition-line-stack-with-carry" : ""}`}>
+              {resultCarryControl ? <div className="addition-line-carry-overlay">{resultCarryControl}</div> : null}
+              <div className="addition-line">
+                <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
+                {renderArithmeticNumericField("result", arithmeticBlock.result, "addition-row addition-row-result")}
+              </div>
             </div>
           </div>
         </div>
@@ -4120,50 +4266,76 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
         columns: number,
         className: string,
         onUpdate: (nextValue: string) => void
-      ) => (
-        <div className={`division-cell-row ${className}`} style={{ ["--division-columns" as string]: columns } as ReactCSSProperties}>
-          {Array.from({ length: columns }).map((_, index) => {
-            const cellField = index === 0 ? field : `${field}:${index}`;
-            const isActive = currentField === cellField || (index === 0 && currentField === field);
+      ) => {
+        const applyDivisionCellInput = (index: number, rawValue: string) => {
+          const nextCharacters = Array.from(normalizeDivisionDecimalInput(rawValue));
 
-            return (
-              <input
-                key={cellField}
-                ref={setDivisionCellRef(field, index)}
-                value={getDivisionCellValue(value, index)}
-                inputMode="numeric"
-                maxLength={1}
-                className={`division-cell-input ${isActive ? "division-cell-input-active" : ""}`}
-                onMouseDown={(event) => event.stopPropagation()}
-                onFocus={() => focusDivisionCell(field, index)}
-                onChange={(event) => {
-                  const nextCharacter = Array.from(event.target.value).slice(-1).join("");
-                  onUpdate(setDivisionCellValue(value, index, nextCharacter));
+          if (nextCharacters.length === 0) {
+            onUpdate(setDivisionCellValue(value, index, ""));
+            return;
+          }
 
-                  if (nextCharacter) {
-                    moveDivisionCellFocus(field, index, "next", columns);
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "ArrowLeft") {
+          const nextState = setDivisionCellValues(value, index, nextCharacters, columns);
+          onUpdate(nextState.value);
+
+          if (nextState.insertedCount > 0) {
+            const nextIndex = Math.min(index + nextState.insertedCount, columns - 1);
+
+            if (nextIndex !== index) {
+              focusDivisionCell(field, nextIndex);
+            }
+          }
+        };
+
+        return (
+          <div className={`division-cell-row ${className}`} style={{ ["--division-columns" as string]: columns } as ReactCSSProperties}>
+            {Array.from({ length: columns }).map((_, index) => {
+              const cellField = index === 0 ? field : `${field}:${index}`;
+              const isActive = currentField === cellField || (index === 0 && currentField === field);
+
+              return (
+                <input
+                  key={cellField}
+                  ref={setDivisionCellRef(field, index)}
+                  value={getDivisionCellValue(value, index)}
+                  inputMode="numeric"
+                  maxLength={1}
+                  className={`division-cell-input ${isActive ? "division-cell-input-active" : ""}`}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onFocus={() => focusDivisionCell(field, index)}
+                  onPaste={(event: ReactClipboardEvent<HTMLInputElement>) => {
                     event.preventDefault();
-                    moveDivisionCellFocus(field, index, "previous", columns);
-                    return;
-                  }
-
-                  if (event.key === "ArrowRight") {
-                    event.preventDefault();
-                    moveDivisionCellFocus(field, index, "next", columns);
-                    return;
-                  }
-
-                  if (event.key === "Backspace" && !getDivisionCellValue(value, index)) {
-                    event.preventDefault();
-                    if (moveDivisionCellFocus(field, index, "previous", columns)) {
-                      onUpdate(setDivisionCellValue(value, Math.max(0, index - 1), ""));
+                    applyDivisionCellInput(index, event.clipboardData.getData("text"));
+                  }}
+                  onChange={(event) => {
+                    applyDivisionCellInput(index, event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key.length === 1 && /[0-9,.]/.test(event.key)) {
+                      event.preventDefault();
+                      applyDivisionCellInput(index, event.key);
+                      return;
                     }
-                    return;
-                  }
+
+                    if (event.key === "ArrowLeft") {
+                      event.preventDefault();
+                      moveDivisionCellFocus(field, index, "previous", columns);
+                      return;
+                    }
+
+                    if (event.key === "ArrowRight") {
+                      event.preventDefault();
+                      moveDivisionCellFocus(field, index, "next", columns);
+                      return;
+                    }
+
+                    if (event.key === "Backspace" && !getDivisionCellValue(value, index)) {
+                      event.preventDefault();
+                      if (moveDivisionCellFocus(field, index, "previous", columns)) {
+                        onUpdate(setDivisionCellValue(value, Math.max(0, index - 1), ""));
+                      }
+                      return;
+                    }
 
                     if (event.key === "Enter") {
                       event.preventDefault();
@@ -4172,74 +4344,75 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                         const visibleLines = getDivisionVisibleWorkLines(block.work, block.quotient);
                         const maxLines = getDivisionMaxWorkLines(block.quotient);
 
-                      if (lineIndex < visibleLines.length - 1 || ((visibleLines[lineIndex] ?? "").trim().length > 0 && lineIndex < maxLines - 1)) {
-                        setEditingBlock({ blockId: block.id, field: `work:${lineIndex + 1}` });
+                        if (lineIndex < visibleLines.length - 1 || ((visibleLines[lineIndex] ?? "").trim().length > 0 && lineIndex < maxLines - 1)) {
+                          setEditingBlock({ blockId: block.id, field: `work:${lineIndex + 1}` });
+                        }
+                        return;
                       }
-                      return;
-                    }
 
-                    const nextField =
-                      field === "dividend"
-                        ? "divisor"
-                        : field === "divisor"
-                          ? "quotient"
-                          : field === "quotient"
-                            ? "work:0"
-                            : null;
-
-                    if (nextField) {
-                      setEditingBlock({ blockId: block.id, field: nextField });
-                      return;
-                    }
-
-                    finishBlockEditing(block.id);
-                    return;
-                  }
-
-                  if (event.key === "Tab") {
-                    event.preventDefault();
-
-                    if (event.shiftKey && moveDivisionCellFocus(field, index, "previous", columns)) {
-                      return;
-                    }
-
-                    if (!event.shiftKey && moveDivisionCellFocus(field, index, "next", columns)) {
-                      return;
-                    }
-
-                    const nextField =
-                      field === "dividend"
-                        ? event.shiftKey
-                          ? null
-                          : "divisor"
-                        : field === "divisor"
-                          ? event.shiftKey
-                            ? "dividend"
-                            : "quotient"
-                          : field === "quotient"
-                            ? event.shiftKey
-                              ? "divisor"
-                              : "work:0"
-                            : field.startsWith("work:")
-                              ? (() => {
-                                  const lineIndex = Number.parseInt(field.slice(5), 10);
-                                  return event.shiftKey ? (lineIndex > 0 ? `work:${lineIndex - 1}` : "quotient") : `work:${lineIndex + 1}`;
-                                })()
+                      const nextField =
+                        field === "dividend"
+                          ? "divisor"
+                          : field === "divisor"
+                            ? "quotient"
+                            : field === "quotient"
+                              ? "work:0"
                               : null;
 
-                    if (nextField) {
-                      setEditingBlock({ blockId: block.id, field: nextField });
+                      if (nextField) {
+                        setEditingBlock({ blockId: block.id, field: nextField });
+                        return;
+                      }
+
+                      finishBlockEditing(block.id);
                       return;
                     }
 
-                    finishBlockEditing(block.id);
-                  }
-                }}
-              />
-            );
-          })}
-        </div>
-      );
+                    if (event.key === "Tab") {
+                      event.preventDefault();
+
+                      if (event.shiftKey && moveDivisionCellFocus(field, index, "previous", columns)) {
+                        return;
+                      }
+
+                      if (!event.shiftKey && moveDivisionCellFocus(field, index, "next", columns)) {
+                        return;
+                      }
+
+                      const nextField =
+                        field === "dividend"
+                          ? event.shiftKey
+                            ? null
+                            : "divisor"
+                          : field === "divisor"
+                            ? event.shiftKey
+                              ? "dividend"
+                              : "quotient"
+                            : field === "quotient"
+                              ? event.shiftKey
+                                ? "divisor"
+                                : "work:0"
+                              : field.startsWith("work:")
+                                ? (() => {
+                                    const lineIndex = Number.parseInt(field.slice(5), 10);
+                                    return event.shiftKey ? (lineIndex > 0 ? `work:${lineIndex - 1}` : "quotient") : `work:${lineIndex + 1}`;
+                                  })()
+                                : null;
+
+                      if (nextField) {
+                        setEditingBlock({ blockId: block.id, field: nextField });
+                        return;
+                      }
+
+                      finishBlockEditing(block.id);
+                    }
+                  }}
+                />
+              );
+            })}
+          </div>
+        );
+      };
       const renderDivisionNumericField = (
         field: "dividend" | "divisor" | "quotient",
         value: string,
