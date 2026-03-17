@@ -3,17 +3,19 @@
   \*************************************************************************************************************************************************************************************************************************************************************/
 :root {
   color-scheme: light;
-  --surface: rgba(255, 248, 238, 0.9);
-  --paper: #fffdf9;
-  --paper-line: rgba(187, 209, 235, 0.85);
-  --paper-margin: rgba(235, 146, 82, 0.45);
-  --ink: #1f2d3d;
-  --muted: #5c6775;
-  --line: rgba(73, 92, 117, 0.16);
-  --accent: #d97745;
-  --accent-strong: #bc5f2d;
-  --accent-soft: rgba(217, 119, 69, 0.16);
-  --shadow: 0 18px 48px rgba(86, 64, 31, 0.09);
+  --surface: rgba(241, 243, 237, 0.94);
+  --surface-strong: rgba(247, 246, 240, 0.96);
+  --panel: rgba(255, 252, 247, 0.9);
+  --paper: #fffdf8;
+  --paper-line: rgba(182, 202, 223, 0.82);
+  --paper-margin: rgba(214, 143, 102, 0.38);
+  --ink: #243342;
+  --muted: #66717b;
+  --line: rgba(91, 107, 121, 0.18);
+  --accent: #cf8158;
+  --accent-strong: #aa6546;
+  --accent-soft: rgba(207, 129, 88, 0.16);
+  --shadow: 0 18px 42px rgba(52, 64, 54, 0.1);
   --radius-xl: 30px;
   --radius-lg: 22px;
   --radius-md: 16px;
@@ -31,9 +33,9 @@
 html {
   min-height: 100%;
   background:
-    radial-gradient(circle at top left, rgba(232, 173, 104, 0.5), transparent 30%),
-    radial-gradient(circle at 84% 12%, rgba(178, 203, 188, 0.4), transparent 24%),
-    linear-gradient(180deg, #f7eedf 0%, #e7d3b2 100%);
+    radial-gradient(circle at top left, rgba(184, 211, 198, 0.42), transparent 28%),
+    radial-gradient(circle at 84% 12%, rgba(201, 211, 232, 0.32), transparent 22%),
+    linear-gradient(180deg, #eef3ee 0%, #dfe7df 100%);
 }
 
 body {
@@ -53,7 +55,7 @@ button {
 }
 
 :where(button, input, .rich-text-block):focus-visible {
-  outline: 3px solid rgba(217, 119, 69, 0.38);
+  outline: 3px solid color-mix(in srgb, var(--accent) 40%, white);
   outline-offset: 3px;
 }
 
@@ -73,38 +75,37 @@ button {
   0%,
   100% {
     transform: translateY(0) scale(1);
-    box-shadow: 0 16px 34px rgba(46, 31, 10, 0.12);
+    box-shadow: 0 16px 34px rgba(36, 51, 66, 0.12);
   }
 
   15%,
   55% {
     transform: translateY(-2px) scale(1.015);
-    box-shadow: 0 20px 40px rgba(46, 31, 10, 0.18);
+    box-shadow: 0 20px 40px rgba(36, 51, 66, 0.18);
   }
 
   30%,
   70% {
     transform: translateY(0) scale(1);
-    box-shadow: 0 16px 34px rgba(46, 31, 10, 0.12);
+    box-shadow: 0 16px 34px rgba(36, 51, 66, 0.12);
   }
 }
 
 .editor-shell {
   display: grid;
-  grid-template-columns: 19.5rem minmax(0, 1fr);
-  grid-gap: 1rem;
-  gap: 1rem;
-  width: min(1520px, calc(100% - 1rem));
+  grid-template-columns: 18.6rem minmax(0, 1fr);
+  grid-gap: 1.3rem;
+  gap: 1.3rem;
+  width: min(1540px, calc(100% - 1.35rem));
   margin: 0 auto;
-  padding: 0.75rem 0 1.5rem;
+  padding: 0.9rem 0 1.8rem;
   align-items: start;
 }
 
 .top-toolbar,
 .editor-stage {
   border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow: var(--shadow);
 }
 
@@ -118,11 +119,17 @@ button {
   height: calc(100vh - 1.5rem);
   max-height: calc(100vh - 1.5rem);
   z-index: 20;
-  padding: 0.9rem;
+  padding: 0.95rem;
   overflow: visible;
   border-radius: 28px;
-  -webkit-backdrop-filter: blur(18px);
-          backdrop-filter: blur(18px);
+  border-color: color-mix(in srgb, var(--line) 78%, white);
+  background:
+    linear-gradient(180deg, rgba(248, 246, 239, 0.95) 0%, rgba(239, 242, 234, 0.94) 100%);
+  box-shadow:
+    0 14px 30px rgba(36, 51, 66, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
 }
 
 .tools-drawer-backdrop {
@@ -131,8 +138,14 @@ button {
 
 .editor-stage {
   min-height: calc(100vh - 1.5rem);
-  padding: 1rem;
+  padding: 1.2rem 1.2rem 1.35rem;
   min-width: 0;
+  border-color: rgba(255, 255, 255, 0.78);
+  background:
+    linear-gradient(180deg, rgba(248, 248, 243, 0.88) 0%, rgba(238, 242, 235, 0.94) 100%);
+  box-shadow:
+    0 22px 46px rgba(36, 51, 66, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
 }
 
 .sheet-action-bar {
@@ -142,29 +155,29 @@ button {
   z-index: 15;
   display: flex;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.7rem;
   flex-wrap: wrap;
-  margin-bottom: 0.9rem;
-  padding: 0.38rem 0.55rem;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(255, 251, 244, 0.9);
-  box-shadow: 0 18px 36px rgba(58, 41, 17, 0.08);
-  -webkit-backdrop-filter: blur(14px);
-          backdrop-filter: blur(14px);
+  margin-bottom: 1rem;
+  padding: 0.42rem 0.58rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, white);
+  background: rgba(249, 248, 243, 0.84);
+  box-shadow: 0 10px 24px rgba(36, 51, 66, 0.05);
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
 .sheet-action-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.45rem;
   pointer-events: auto;
 }
 
 .sheet-action-bar .toolbar-action {
-  min-height: 34px;
-  padding: 0.42rem 0.78rem;
+  min-height: 40px;
+  padding: 0.46rem 0.88rem;
   font-size: 0.9rem;
 }
 
@@ -174,8 +187,8 @@ button {
 }
 
 .sheet-tool-button-active {
-  border-color: rgba(217, 119, 69, 0.78);
-  box-shadow: 0 0 0 2px rgba(217, 119, 69, 0.18);
+  border-color: color-mix(in srgb, var(--accent) 78%, white);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, white);
 }
 
 .selection-icon {
@@ -195,11 +208,11 @@ button {
   flex: 1 1 auto;
   align-content: start;
   grid-auto-rows: max-content;
-  grid-gap: 0.8rem;
-  gap: 0.8rem;
+  grid-gap: 0.95rem;
+  gap: 0.95rem;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 0.15rem;
+  padding-right: 0.2rem;
   max-width: none;
   margin: 0;
 }
@@ -209,7 +222,7 @@ button {
   margin-top: 0.4rem;
   padding: 0.82rem 0.25rem 0 0.15rem;
   border-top: 1px solid color-mix(in srgb, var(--line) 88%, white);
-  background: linear-gradient(180deg, rgba(255, 253, 249, 0) 0%, rgba(255, 250, 243, 0.76) 100%);
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0) 0%, rgba(248, 246, 240, 0.78) 100%);
 }
 
 .sidebar-credit {
@@ -246,8 +259,8 @@ button {
 
 .sidebar-block {
   display: grid;
-  grid-gap: 0.5rem;
-  gap: 0.5rem;
+  grid-gap: 0.55rem;
+  gap: 0.55rem;
   align-content: start;
 }
 
@@ -257,11 +270,10 @@ button {
 
 .sidebar-block-label {
   margin: 0;
-  color: color-mix(in srgb, var(--ink) 68%, white);
-  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--ink) 74%, var(--paper));
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 .sidebar-helper {
@@ -284,10 +296,14 @@ button {
 }
 
 .toolbar-row-secondary {
-  padding: 0.55rem 0.65rem 0.6rem;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  background: rgba(255, 255, 255, 0.58);
+  padding: 0.72rem 0.78rem 0.76rem;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, white);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 247, 0.72) 0%, rgba(247, 248, 242, 0.52) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .toolbar-separator {
@@ -300,23 +316,27 @@ button {
 
 .toolbar-row-format {
   order: -1;
-  padding: 0.55rem 0.65rem 0.6rem;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  background: rgba(255, 255, 255, 0.58);
+  padding: 0.8rem 0.82rem 0.86rem;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--line) 74%, white);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 249, 0.9) 0%, rgba(246, 248, 241, 0.76) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.56),
+    0 8px 18px rgba(36, 51, 66, 0.06);
   align-content: start;
 }
 
 .toolbar-row-format .chip-button {
-  min-height: 36px;
-  padding: 0.45rem 0.72rem;
-  border-radius: 14px;
-  font-size: 0.86rem;
+  min-height: 42px;
+  padding: 0.48rem 0.74rem;
+  border-radius: 13px;
+  font-size: 0.88rem;
 }
 
 .toolbar-row-format .chip-button-compact {
-  min-height: 36px;
-  padding-inline: 0.58rem;
+  min-height: 42px;
+  padding-inline: 0.68rem;
 }
 
 .toolbar-highlight-shell {
@@ -327,8 +347,8 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
-  min-height: 36px;
-  padding-inline: 0.62rem;
+  min-height: 42px;
+  padding-inline: 0.72rem;
 }
 
 .toolbar-highlight-button-active {
@@ -398,10 +418,10 @@ button {
   gap: 0.55rem;
   min-width: 15.5rem;
   padding: 0.75rem;
-  border: 1px solid rgba(92, 108, 129, 0.16);
+  border: 1px solid color-mix(in srgb, var(--line) 90%, white);
   border-radius: 18px;
   background: rgba(255, 253, 249, 0.98);
-  box-shadow: 0 16px 36px rgba(31, 45, 61, 0.12);
+  box-shadow: 0 16px 36px rgba(36, 51, 66, 0.1);
 }
 
 .toolbar-highlight-swatch {
@@ -411,7 +431,7 @@ button {
   gap: 0.38rem;
   min-width: 4.2rem;
   padding: 0.45rem;
-  border: 1px solid rgba(92, 108, 129, 0.14);
+  border: 1px solid color-mix(in srgb, var(--line) 84%, white);
   border-radius: 14px;
   background: rgba(255, 253, 249, 0.98);
   text-align: left;
@@ -434,8 +454,8 @@ button {
 
 .toolbar-highlight-swatch-clear .toolbar-highlight-swatch-sample {
   position: relative;
-  background: rgba(255, 248, 242, 0.96);
-  border: 1px dashed rgba(214, 111, 60, 0.35);
+  background: color-mix(in srgb, var(--paper) 92%, var(--accent) 8%);
+  border: 1px dashed color-mix(in srgb, var(--accent) 35%, white);
 }
 
 .toolbar-highlight-swatch-clear .toolbar-highlight-swatch-sample::after {
@@ -443,12 +463,12 @@ button {
   position: absolute;
   inset: 0.12rem;
   border-radius: 0.32rem;
-  background: linear-gradient(135deg, transparent 44%, rgba(214, 111, 60, 0.88) 44%, rgba(214, 111, 60, 0.88) 56%, transparent 56%);
+  background: linear-gradient(135deg, transparent 44%, color-mix(in srgb, var(--accent) 88%, white) 44%, color-mix(in srgb, var(--accent) 88%, white) 56%, transparent 56%);
 }
 
 .toolbar-highlight-swatch:hover,
 .toolbar-highlight-swatch:focus-visible {
-  border-color: rgba(92, 108, 129, 0.28);
+  border-color: color-mix(in srgb, var(--line) 100%, var(--ink));
   transform: translateY(-1px);
 }
 
@@ -458,8 +478,8 @@ button {
 }
 
 .toolbar-row-format .color-chip {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2.45rem;
+  height: 2.45rem;
 }
 
 .toolbar-shortcut-group {
@@ -475,27 +495,43 @@ button {
 }
 
 .toolbar-shortcut {
-  min-height: 36px;
-  padding: 0.45rem 0.72rem;
-  border: 1px solid rgba(92, 108, 129, 0.14);
-  border-radius: 14px;
-  background: rgba(255, 253, 249, 0.94);
+  min-height: 42px;
+  padding: 0.48rem 0.8rem;
+  border: 1px solid rgba(95, 108, 126, 0.15);
+  border-radius: 13px;
+  background: rgba(255, 252, 247, 0.88);
   color: var(--ink);
-  font-weight: 700;
-  font-size: 0.86rem;
+  font-weight: 800;
+  font-size: 0.9rem;
   white-space: nowrap;
   cursor: -webkit-grab;
   cursor: grab;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.34);
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
+}
+
+.toolbar-shortcut:hover,
+.toolbar-shortcut:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(95, 108, 126, 0.24);
+  background: rgba(255, 253, 249, 0.97);
+  box-shadow: 0 8px 16px rgba(47, 35, 15, 0.07);
 }
 
 .toolbar-shortcut:active {
   cursor: -webkit-grabbing;
   cursor: grabbing;
+  transform: translateY(0);
 }
 
 .toolbar-shortcut-symbol {
-  min-width: 2.2rem;
-  padding-inline: 0.58rem;
+  min-width: 2.6rem;
+  padding-inline: 0.72rem;
   text-align: center;
 }
 
@@ -511,9 +547,12 @@ button {
 }
 
 .toolbar-shortcut-active {
-  background: var(--ink);
+  background: color-mix(in srgb, var(--ink) 92%, var(--paper));
   color: #fffdf9;
-  border-color: transparent;
+  border-color: color-mix(in srgb, var(--ink) 74%, var(--paper));
+  box-shadow:
+    0 10px 18px rgba(31, 45, 61, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .toolbar-shortcut-move-active {
@@ -646,7 +685,7 @@ input {
 .shortcut-chip,
 .small-action {
   min-height: 44px;
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid rgba(92, 108, 129, 0.16);
   background: rgba(255, 253, 249, 0.94);
   color: var(--ink);
@@ -654,24 +693,47 @@ input {
 
 .toolbar-action {
   border-radius: 999px;
-  padding: 0.75rem 0.95rem;
+  padding: 0.75rem 0.98rem;
   font-weight: 800;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.toolbar-action:hover,
+.chip-button:hover,
+.small-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(36, 51, 66, 0.08);
+}
+
+.toolbar-action:active,
+.chip-button:active,
+.small-action:active {
+  transform: translateY(0);
+}
+
+.toolbar-action.ghost {
+  background: rgba(255, 252, 247, 0.9);
+  border-color: color-mix(in srgb, var(--line) 92%, white);
 }
 
 .toolbar-action.primary {
-  background: linear-gradient(135deg, #db824d 0%, #bf6531 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 92%, white) 0%, var(--accent-strong) 100%);
   color: #fffdf9;
   border-color: transparent;
 }
 
 .toolbar-action.secondary {
-  background: #254360;
+  background: color-mix(in srgb, var(--ink) 82%, #5c7a73);
   color: #fffdfa;
   border-color: transparent;
 }
 
 .primary-inline-action {
-  background: linear-gradient(135deg, #db824d 0%, #bf6531 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 92%, white) 0%, var(--accent-strong) 100%);
   color: #fffdf9;
   border-color: transparent;
 }
@@ -695,14 +757,14 @@ input {
   gap: 0.85rem;
   padding: 0.95rem;
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.76);
+  background: rgba(250, 250, 246, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .toolbar-popover-panel {
   margin-top: 0;
   pointer-events: auto;
-  box-shadow: 0 24px 54px rgba(58, 41, 17, 0.12);
+  box-shadow: 0 24px 54px rgba(36, 51, 66, 0.12);
 }
 
 .inline-chip-toolbar {
@@ -753,9 +815,10 @@ input {
 }
 
 .chip-button-active {
-  background: var(--ink);
+  background: color-mix(in srgb, var(--ink) 92%, var(--paper));
   color: #fffdf9;
-  border-color: transparent;
+  border-color: color-mix(in srgb, var(--ink) 74%, var(--paper));
+  box-shadow: 0 10px 18px rgba(36, 51, 66, 0.14);
 }
 
 .chip-button-compact {
@@ -785,6 +848,15 @@ input {
   border: none;
   border-radius: 999px;
   box-shadow: inset 0 0 0 1px rgba(31, 45, 61, 0.08);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.color-chip:hover,
+.color-chip:focus-visible {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow:
+    inset 0 0 0 1px rgba(31, 45, 61, 0.08),
+    0 10px 18px rgba(36, 51, 66, 0.08);
 }
 
 .color-chip::after {
@@ -801,11 +873,26 @@ input {
 }
 
 .editor-sheet {
+  position: relative;
+  isolation: isolate;
   min-height: calc(100vh - 16rem);
-  padding: 1rem;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.74);
-  background: rgba(255, 255, 255, 0.4);
+  padding: 1.1rem 1.15rem 1.3rem;
+  border-radius: 32px;
+  border: 1px solid rgba(224, 221, 211, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 253, 0.98) 0%, rgba(255, 252, 247, 0.98) 100%);
+  box-shadow:
+    0 32px 72px rgba(36, 51, 66, 0.14),
+    0 12px 24px rgba(36, 51, 66, 0.06);
+}
+
+.editor-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .editor-sheet-head {
@@ -814,7 +901,7 @@ input {
   align-items: flex-start;
   gap: 1rem;
   width: min(100%, var(--a4-width));
-  margin: 0 auto 0.8rem;
+  margin: 0 auto 1rem;
 }
 
 .editor-sheet h1,
@@ -832,9 +919,10 @@ input {
   background: transparent;
   box-shadow: none;
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.16;
+  letter-spacing: -0.025em;
 }
 
 .sheet-title-input::placeholder {
@@ -843,22 +931,23 @@ input {
 
 .sheet-style-picker {
   display: grid;
-  grid-gap: 0.3rem;
-  gap: 0.3rem;
+  grid-gap: 0.35rem;
+  gap: 0.35rem;
   justify-items: end;
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 70%, white);
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .sheet-style-select {
-  min-height: 2.2rem;
-  padding: 0.38rem 0.75rem;
-  border: 1px solid rgba(92, 108, 129, 0.14);
-  border-radius: 12px;
-  background: rgba(255, 253, 249, 0.96);
+  min-height: 2.5rem;
+  padding: 0.44rem 0.82rem;
+  border: 1px solid rgba(92, 108, 129, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 252, 247, 0.94);
   color: var(--ink);
-  font-weight: 700;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
 }
 
 .editor-sheet-note {
@@ -875,8 +964,8 @@ input {
   margin-bottom: 0.85rem;
   padding: 0.7rem 0.85rem;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(250, 250, 246, 0.62);
 }
 
 .editor-local-toolbar-group {
@@ -888,7 +977,7 @@ input {
 
 .editor-local-toolbar-group + .editor-local-toolbar-group {
   padding-left: 0.7rem;
-  border-left: 1px solid rgba(92, 108, 129, 0.16);
+  border-left: 1px solid color-mix(in srgb, var(--line) 92%, white);
 }
 
 .editor-local-toolbar-group-block {
@@ -909,8 +998,8 @@ input {
 
 .document-card {
   border-radius: 24px;
-  border: 1px solid rgba(92, 108, 129, 0.14);
-  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid color-mix(in srgb, var(--line) 84%, white);
+  background: rgba(252, 252, 249, 0.8);
   padding: 1rem;
 }
 
@@ -919,8 +1008,8 @@ input {
 }
 
 .card-active {
-  border-color: rgba(188, 95, 45, 0.32);
-  box-shadow: 0 14px 28px rgba(188, 95, 45, 0.08);
+  border-color: color-mix(in srgb, var(--accent) 42%, white);
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--accent) 16%, white);
 }
 
 .card-head {
@@ -954,13 +1043,13 @@ input {
 }
 
 .rich-text-block-dragover {
-  border-color: rgba(188, 95, 45, 0.38);
-  box-shadow: inset 0 0 0 2px rgba(217, 119, 69, 0.14);
+  border-color: color-mix(in srgb, var(--accent) 48%, white);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 18%, white);
 }
 
 .rich-text-block[data-empty="true"]::before {
   content: "Écris ici. Tu peux taper librement puis ajouter un bloc posé avec la barre d’outils.";
-  color: rgba(92, 103, 117, 0.72);
+  color: color-mix(in srgb, var(--muted) 72%, white);
 }
 
 .rich-text-block p,
@@ -1783,7 +1872,7 @@ input {
   overflow: hidden;
   border: 2px solid transparent;
   background: rgba(255, 252, 247, 0.96);
-  box-shadow: 0 6px 18px rgba(31, 45, 61, 0.12);
+  box-shadow: 0 6px 18px rgba(36, 51, 66, 0.12);
   cursor: -webkit-grab;
   cursor: grab;
   transition:
@@ -1794,7 +1883,7 @@ input {
 
 .math-inline-chip:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(31, 45, 61, 0.16);
+  box-shadow: 0 10px 22px rgba(36, 51, 66, 0.16);
 }
 
 .math-inline-chip:active {
@@ -1803,10 +1892,10 @@ input {
 }
 
 .math-inline-chip-selected {
-  border-color: rgba(217, 119, 69, 0.62);
+  border-color: color-mix(in srgb, var(--accent) 62%, white);
   box-shadow:
-    0 12px 28px rgba(31, 45, 61, 0.18),
-    0 0 0 4px rgba(217, 119, 69, 0.16);
+    0 12px 28px rgba(36, 51, 66, 0.18),
+    0 0 0 4px color-mix(in srgb, var(--accent) 16%, white);
 }
 
 .math-inline-image {
@@ -1827,7 +1916,7 @@ input {
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgba(31, 45, 61, 0.32);
+  background: rgba(36, 51, 66, 0.3);
   -webkit-backdrop-filter: blur(6px);
           backdrop-filter: blur(6px);
 }
@@ -1839,7 +1928,7 @@ input {
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.82);
   background: rgba(255, 252, 247, 0.98);
-  box-shadow: 0 24px 64px rgba(31, 45, 61, 0.16);
+  box-shadow: 0 24px 64px rgba(36, 51, 66, 0.16);
   padding: 1rem;
 }
 
@@ -1856,7 +1945,7 @@ input {
 }
 
 .block-modal-preview .export-math-block {
-  background: rgba(246, 238, 225, 0.6);
+  background: color-mix(in srgb, var(--surface) 70%, var(--paper));
 }
 
 .export-clone {
@@ -2273,14 +2362,14 @@ input {
   }
 
   .toolbar-shortcut {
-    min-height: 34px;
-    padding: 0.4rem 0.58rem;
-    font-size: 0.8rem;
+    min-height: 40px;
+    padding: 0.42rem 0.62rem;
+    font-size: 0.84rem;
   }
 
   .toolbar-icon-button {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
   }
 }
 

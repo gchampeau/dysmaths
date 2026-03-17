@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Maths Facile",
+  title: "Dysmaths - l'écriture mathématique facile pour les dysgraphiques et dyspraxiques",
   description:
     "Une application Next.js pensée pour permettre aux collégiens et lycéens de rédiger, sauvegarder et imprimer leurs formules mathématiques."
 };
