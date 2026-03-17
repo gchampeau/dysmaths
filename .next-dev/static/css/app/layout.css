@@ -1204,6 +1204,53 @@ input {
   width: max-content;
 }
 
+.operation-edit-shell {
+  display: inline-grid;
+  grid-template-columns: max-content max-content;
+  align-items: start;
+  gap: 0.58rem;
+}
+
+.operation-edit-menu {
+  display: inline-grid;
+  gap: 0.24rem;
+  align-self: start;
+  padding: 0.38rem;
+  border: 1px solid rgba(92, 108, 129, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 10px 22px rgba(31, 45, 61, 0.08);
+}
+
+.operation-edit-menu-button {
+  min-width: 4.3rem;
+  min-height: 2rem;
+  padding: 0.16rem 0.52rem;
+  border: 1px solid rgba(92, 108, 129, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.98);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.operation-edit-menu-button-active {
+  border-color: rgba(217, 119, 69, 0.36);
+  background: rgba(255, 239, 221, 0.96);
+  color: #8a431e;
+}
+
+.operation-edit-menu-hint {
+  color: rgba(31, 45, 61, 0.66);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .addition-number-field {
   position: relative;
   width: calc((var(--division-columns) * var(--division-cell-size)) + ((var(--division-columns) - 1) * var(--division-cell-gap)));
@@ -1212,6 +1259,12 @@ input {
 .addition-number-display {
   min-width: 100%;
   pointer-events: none;
+}
+
+.addition-number-display-strike-mode {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
 }
 
 .addition-number-field-active .division-cell {
@@ -1261,6 +1314,10 @@ input {
   letter-spacing: 0;
   caret-color: currentColor;
   -webkit-text-fill-color: transparent;
+}
+
+.addition-number-input-strike-mode {
+  pointer-events: none;
 }
 
 .addition-number-input:focus {
@@ -1376,6 +1433,29 @@ input {
   font-size: 0.95em;
   line-height: 1;
   font-weight: 600;
+}
+
+.division-cell-button {
+  padding: 0;
+  border-radius: 0;
+  -moz-appearance: none;
+       appearance: none;
+  -webkit-appearance: none;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.division-cell-struck,
+.division-cell-input-struck {
+  background-image: linear-gradient(
+    135deg,
+    transparent calc(50% - 1px),
+    color-mix(in srgb, currentColor 86%, white) calc(50% - 1px),
+    color-mix(in srgb, currentColor 86%, white) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
 }
 
 .division-cell-target {
@@ -1517,6 +1597,12 @@ input {
   pointer-events: none;
 }
 
+.division-number-field-display-strike-mode {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
 .division-number-field-active .division-cell {
   border-color: color-mix(in srgb, currentColor 88%, white);
   background: rgba(255, 235, 214, 0.96);
@@ -1551,6 +1637,10 @@ input {
 .division-dividend-field::selection {
   background: transparent;
   color: transparent;
+}
+
+.division-number-field-input-strike-mode {
+  pointer-events: none;
 }
 
 .division-workpad-editor {
@@ -2693,6 +2783,21 @@ input {
 @media (max-width: 760px) {
   .canvas-quick-menu {
     grid-template-columns: repeat(3, minmax(0, max-content));
+  }
+
+  .operation-edit-shell {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .operation-edit-menu {
+    grid-auto-flow: column;
+    justify-content: start;
+    align-items: center;
+  }
+
+  .operation-edit-menu-hint {
+    text-align: left;
   }
 }
 
