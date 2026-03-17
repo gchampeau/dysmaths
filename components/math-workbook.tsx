@@ -215,6 +215,7 @@ type WriterState = {
   title: string;
   mode: StudyMode;
   sheetStyle: SheetStyle;
+  zoomPercent: number;
   activeColor: string;
   activeHighlightColor: string | null;
   textHtml: string;
@@ -434,6 +435,7 @@ function createDefaultState(sheetStyle: SheetStyle = "seyes"): WriterState {
     title: "Mon devoir de maths",
     mode: "college",
     sheetStyle,
+    zoomPercent: 100,
     activeColor: DEFAULT_ACTIVE_COLOR,
     activeHighlightColor: "rgba(255, 226, 92, 0.58)",
     textHtml: DEFAULT_TEXT_HTML,
@@ -458,6 +460,8 @@ const HIGHLIGHT_OPTIONS = [
   { id: "blue", label: "Bleu", value: "rgb(160 208 255)" },
   { id: "pink", label: "Rose", value: "rgb(255 184 210)" }
 ] as const;
+
+const ZOOM_OPTIONS = [100, 125, 150, 175, 200, 250, 300] as const;
 
 const SHEET_STYLE_OPTIONS = [
   { id: "seyes" as const, label: "Lignes Seyes" },
@@ -835,6 +839,10 @@ function getRemPixels() {
   return Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
 }
 
+function clampZoomPercent(value: number) {
+  return Math.max(100, Math.min(300, Math.round(value)));
+}
+
 function parseStoredState(raw: string): WriterState | null {
   try {
     const parsed = JSON.parse(raw) as WriterState;
@@ -862,6 +870,10 @@ function parseStoredState(raw: string): WriterState | null {
     return {
       ...parsed,
       sheetStyle: parsedSheetStyle,
+      zoomPercent:
+        typeof (parsed as { zoomPercent?: unknown }).zoomPercent === "number"
+          ? clampZoomPercent((parsed as { zoomPercent: number }).zoomPercent)
+          : defaultState.zoomPercent,
       activeColor: typeof (parsed as { activeColor?: unknown }).activeColor === "string" ? parsed.activeColor : DEFAULT_ACTIVE_COLOR,
       activeHighlightColor:
         typeof (parsed as { activeHighlightColor?: unknown }).activeHighlightColor === "string"
@@ -1625,6 +1637,8 @@ export function MathWorkbook() {
   const [isCanvasInteracting, setIsCanvasInteracting] = useState(false);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const canvasViewportRef = useRef<HTMLDivElement | null>(null);
+  const canvasTopScrollbarRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef<Range | null>(null);
   const dragRef = useRef<DragState>(null);
   const pendingSelectionRef = useRef<PendingSelection>(null);
@@ -1836,6 +1850,46 @@ export function MathWorkbook() {
 
     setStrikeModeBlockId((current) => (current && current !== editingBlock.blockId ? null : current));
   }, [editingBlock]);
+
+  useEffect(() => {
+    const viewport = canvasViewportRef.current;
+    const topScrollbar = canvasTopScrollbarRef.current;
+
+    if (!viewport || !topScrollbar) {
+      return;
+    }
+
+    let isSyncing = false;
+
+    const syncTopFromViewport = () => {
+      if (isSyncing) {
+        return;
+      }
+
+      isSyncing = true;
+      topScrollbar.scrollLeft = viewport.scrollLeft;
+      isSyncing = false;
+    };
+
+    const syncViewportFromTop = () => {
+      if (isSyncing) {
+        return;
+      }
+
+      isSyncing = true;
+      viewport.scrollLeft = topScrollbar.scrollLeft;
+      isSyncing = false;
+    };
+
+    syncTopFromViewport();
+    viewport.addEventListener("scroll", syncTopFromViewport, { passive: true });
+    topScrollbar.addEventListener("scroll", syncViewportFromTop, { passive: true });
+
+    return () => {
+      viewport.removeEventListener("scroll", syncTopFromViewport);
+      topScrollbar.removeEventListener("scroll", syncViewportFromTop);
+    };
+  }, [state.zoomPercent]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -5072,9 +5126,8 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
       return null;
     }
 
-    const liveBounds = canvasRef.current.getBoundingClientRect();
-    const exportWidth = Math.max(1, Math.round(liveBounds.width));
-    const exportHeight = Math.max(1, Math.round(liveBounds.height));
+    const exportWidth = Math.max(1, Math.round(canvasRef.current.offsetWidth));
+    const exportHeight = Math.max(1, Math.round(canvasRef.current.offsetHeight));
     const wrapper = document.createElement("div");
     wrapper.className = "export-clone";
 
@@ -5620,34 +5673,63 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 aria-label="Titre du document"
               />
             </div>
-            <label className="sheet-style-picker">
-              <span>Style de feuille</span>
-              <select
-                className="sheet-style-select"
-                value={state.sheetStyle}
-                onChange={(event) => setState((current) => ({ ...current, sheetStyle: event.target.value as SheetStyle }))}
-                aria-label="Style de feuille"
-              >
-                {SHEET_STYLE_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="sheet-head-controls">
+              <label className="sheet-style-picker">
+                <span>Style de feuille</span>
+                <select
+                  className="sheet-style-select"
+                  value={state.sheetStyle}
+                  onChange={(event) => setState((current) => ({ ...current, sheetStyle: event.target.value as SheetStyle }))}
+                  aria-label="Style de feuille"
+                >
+                  {SHEET_STYLE_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="sheet-style-picker">
+                <span>Zoom</span>
+                <select
+                  className="sheet-style-select"
+                  value={state.zoomPercent}
+                  onChange={(event) => setState((current) => ({ ...current, zoomPercent: clampZoomPercent(Number(event.target.value)) }))}
+                  aria-label="Niveau de zoom"
+                >
+                  {ZOOM_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
 
           <div
-            className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" || advancedTool === "highlight" ? "document-canvas-draw-mode" : ""} ${advancedTool === "highlight" ? "document-canvas-highlight-mode" : ""} ${pendingInsertTool ? "document-canvas-insert-mode" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "select" || advancedTool === "move" || pendingInsertTool ? "document-canvas-touch-locked" : ""}`}
-            style={{ "--canvas-type-size": `${getDefaultCanvasFontSize(state.sheetStyle)}rem` } as ReactCSSProperties}
-            ref={canvasRef}
-            onDragOver={handleCanvasDragOver}
-            onDragLeave={handleCanvasDragLeave}
-            onDrop={handleCanvasDrop}
-            onMouseMove={(event) => updateInsertCursorPreview(event.clientX, event.clientY)}
-            onMouseLeave={hideInsertCursorPreview}
-            onTouchStart={(event) => handleSurfaceTouchStart(event, event.currentTarget)}
-            onMouseDown={(event) => {
+            className={`document-canvas-scroll-shell ${state.zoomPercent > 100 ? "document-canvas-scroll-shell-zoomed" : ""}`}
+            style={{ ["--canvas-zoom" as string]: state.zoomPercent / 100 } as ReactCSSProperties}
+          >
+            <div className="document-canvas-top-scrollbar" ref={canvasTopScrollbarRef} aria-hidden="true">
+              <div className="document-canvas-top-scrollbar-track" />
+            </div>
+            <div
+              className={`document-canvas-viewport ${state.zoomPercent > 100 ? "document-canvas-viewport-zoomed" : ""}`}
+              ref={canvasViewportRef}
+            >
+            <div className="document-canvas-stage">
+              <div
+                className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" || advancedTool === "highlight" ? "document-canvas-draw-mode" : ""} ${advancedTool === "highlight" ? "document-canvas-highlight-mode" : ""} ${pendingInsertTool ? "document-canvas-insert-mode" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "select" || advancedTool === "move" || pendingInsertTool ? "document-canvas-touch-locked" : ""}`}
+                style={{ "--canvas-type-size": `${getDefaultCanvasFontSize(state.sheetStyle)}rem`, ["zoom" as string]: state.zoomPercent / 100 } as ReactCSSProperties}
+                ref={canvasRef}
+                onDragOver={handleCanvasDragOver}
+                onDragLeave={handleCanvasDragLeave}
+                onDrop={handleCanvasDrop}
+                onMouseMove={(event) => updateInsertCursorPreview(event.clientX, event.clientY)}
+                onMouseLeave={hideInsertCursorPreview}
+                onTouchStart={(event) => handleSurfaceTouchStart(event, event.currentTarget)}
+                onMouseDown={(event) => {
               if (pendingInsertTool && event.target === event.currentTarget) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -5684,8 +5766,8 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
 
               clearFloatingSelection();
               setOpenMenu(null);
-            }}
-          >
+                }}
+              >
             <div
               ref={editorRef}
               className="canvas-editor"
@@ -6205,6 +6287,9 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 }}
               />
             ) : null}
+              </div>
+            </div>
+            </div>
           </div>
         </div>
       </section>

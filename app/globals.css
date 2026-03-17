@@ -882,6 +882,13 @@ input {
   margin: 0 auto 1rem;
 }
 
+.sheet-head-controls {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .editor-sheet h1,
 .export-head h2 {
   margin: 0;
@@ -2369,11 +2376,57 @@ input {
   width: min(100%, var(--a4-width));
   min-height: auto;
   aspect-ratio: 210 / 297;
-  margin: 0 auto;
+  margin: 0;
   border-radius: 24px;
   overflow: hidden;
   background: var(--paper);
   border: 1px solid rgba(92, 108, 129, 0.14);
+}
+
+.document-canvas-scroll-shell {
+  width: 100%;
+}
+
+.document-canvas-top-scrollbar {
+  display: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+  padding-bottom: 0.2rem;
+}
+
+.document-canvas-top-scrollbar-track {
+  width: calc(max(100%, var(--a4-width)) * var(--canvas-zoom, 1));
+  height: 1px;
+}
+
+.document-canvas-scroll-shell-zoomed .document-canvas-top-scrollbar {
+  display: block;
+}
+
+.document-canvas-viewport {
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  padding-bottom: 0.35rem;
+}
+
+.document-canvas-stage {
+  width: max-content;
+  min-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.document-canvas-viewport-zoomed {
+  max-height: calc(100vh - 12rem);
+}
+
+.document-canvas-viewport-zoomed .document-canvas-stage {
+  min-width: calc(100% * var(--canvas-zoom, 1));
+  justify-content: flex-start;
 }
 
 .document-canvas-seyes {
