@@ -1209,7 +1209,7 @@ input {
 .division-cell-target::after {
   content: "";
   position: absolute;
-  left: 50%;
+  left: 68%;
   top: 18%;
   width: 2px;
   height: 64%;
