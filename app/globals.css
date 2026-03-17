@@ -2735,20 +2735,33 @@ input {
 
 .floating-text-shortcuts {
   position: absolute;
-  left: 0;
-  bottom: calc(100% + 8px);
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 0.28rem;
-  padding: 0.35rem;
+  left: 50%;
+  z-index: 8;
+  display: grid;
+  box-sizing: border-box;
+  justify-items: stretch;
+  gap: 0.32rem;
+  padding: 0.5rem;
   border: 1px solid rgba(92, 108, 129, 0.14);
   border-radius: 12px;
   background: rgba(255, 253, 249, 0.98);
   box-shadow: 0 10px 22px rgba(31, 45, 61, 0.1);
+  transform: translateX(calc(-50% + var(--floating-text-shortcuts-shift, 0px)));
+  max-width: min(calc(100vw - 1.25rem), 28rem);
+}
+
+.floating-text-shortcuts-top {
+  bottom: calc(100% + 10px);
+}
+
+.floating-text-shortcuts-bottom {
+  top: calc(100% + 10px);
 }
 
 .floating-text-shortcut {
+  display: grid;
+  place-items: center;
+  width: 100%;
   min-width: 2.35rem;
   min-height: 2.35rem;
   padding: 0.22rem 0.46rem;
@@ -2760,6 +2773,26 @@ input {
   font-size: 1.02rem;
   font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 760px) {
+  .floating-text-shortcuts {
+    gap: 0.38rem;
+    padding: 0.55rem;
+    border-radius: 14px;
+    max-width: min(calc(100vw - 1rem), 22rem);
+  }
+
+  .floating-text-shortcut {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding-inline: 0.28rem;
+    border-radius: 10px;
+    font-size: 0.92rem;
+  }
 }
 
 .floating-text-content {

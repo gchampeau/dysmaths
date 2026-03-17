@@ -312,6 +312,11 @@ type CanvasQuickMenu =
     }
   | null;
 
+type FloatingTextShortcutLayout = {
+  className: string;
+  style: ReactCSSProperties;
+};
+
 type SnapGuides = {
   x: number | null;
   y: number | null;
@@ -1738,10 +1743,15 @@ export function MathWorkbook() {
 
     const canvasBounds = canvasRef.current.getBoundingClientRect();
     const rect = node.getBoundingClientRect();
+    const menuOffset = 12;
+    const estimatedMenuHeight = 52;
+    const boxCenterX = rect.left - canvasBounds.left + rect.width / 2;
+    const aboveY = rect.top - canvasBounds.top - estimatedMenuHeight - menuOffset;
+    const belowY = rect.bottom - canvasBounds.top + menuOffset;
 
     return {
-      x: rect.left - canvasBounds.left + rect.width / 2 + 100,
-      y: Math.max(18, rect.top - canvasBounds.top - 52)
+      x: boxCenterX,
+      y: aboveY >= 18 ? aboveY : belowY
     };
   }, [editingTextBoxId, isCanvasInteracting, selectedCount, selectedTextBox, selectionRect]);
   const pendingInsertLabel = useMemo(() => {
@@ -1840,6 +1850,17 @@ export function MathWorkbook() {
         return;
       }
 
+      if (
+        canvasQuickMenu &&
+        event.key.length === 1 &&
+        !isModifierPressed &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        createTextBoxAt(canvasQuickMenu.clickX, canvasQuickMenu.clickY, "exact", event.key);
+        return;
+      }
+
       if ((event.key === "Delete" || event.key === "Backspace") && selectedCount > 0) {
         event.preventDefault();
         handleHeaderDelete();
@@ -1848,7 +1869,7 @@ export function MathWorkbook() {
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [selectedCount, historyPast.length, historyFuture.length, selectedBlock, selectedSymbol, selectedTextBox, selectedStroke]);
+  }, [canvasQuickMenu, selectedCount, historyPast.length, historyFuture.length, selectedBlock, selectedSymbol, selectedTextBox, selectedStroke]);
 
   useEffect(() => {
     if (pendingInsertTool) {
@@ -2794,14 +2815,18 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     return true;
   }
 
-  function createTextBoxAt(x: number, y: number, mode: "exact" | "soft" = "soft") {
+  function createTextBoxAt(x: number, y: number, mode: "exact" | "soft" = "soft", initialText = "") {
     const canvas = canvasRef.current;
     const bounds = canvas?.getBoundingClientRect();
     const placement =
       mode === "exact"
         ? getExactCanvasPlacementPosition(x, y + FLOATING_TEXTBOX_Y_OFFSET, (bounds?.width ?? 320) - 24, (bounds?.height ?? 320) - 24)
         : getCanvasPlacementPosition(x, y, (bounds?.width ?? 320) - 24, (bounds?.height ?? 320) - 24, "soft");
-    const textBox = createFloatingTextBox(placement.x, placement.y);
+    const textBox = {
+      ...createFloatingTextBox(placement.x, placement.y),
+      text: initialText,
+      width: Math.max(100, getTextBoxWidth(initialText))
+    };
     beginTransientHistorySession("edit");
 
     setState((current) => ({
@@ -2810,6 +2835,62 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
     }));
     beginTextBoxEditing(textBox.id);
     setCanvasQuickMenu(null);
+  }
+
+  function getFloatingTextShortcutLayout(textBoxId: string): FloatingTextShortcutLayout {
+    const shortcutCount = Math.max(1, textBoxShortcuts.length);
+    const fallbackColumns = Math.min(shortcutCount, 5);
+    const fallbackStyle = {
+      ["--floating-text-shortcuts-shift" as string]: "0px",
+      width: `${Math.min(320, fallbackColumns * 44 + Math.max(0, fallbackColumns - 1) * 6 + 24)}px`,
+      gridTemplateColumns: `repeat(${fallbackColumns}, minmax(2.35rem, 1fr))`
+    } as ReactCSSProperties;
+    const canvas = canvasRef.current;
+    const node = textBoxNodeRefs.current[textBoxId];
+
+    if (!canvas || !node || typeof window === "undefined") {
+      return {
+        className: "floating-text-shortcuts-top",
+        style: fallbackStyle
+      };
+    }
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const textBoxRect = node.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const isCompactViewport = viewportWidth <= 760;
+    const horizontalGutter = isCompactViewport ? 16 : 20;
+    const chipSize = isCompactViewport ? 40 : 38;
+    const chipGap = isCompactViewport ? 6 : 5;
+    const menuPadding = isCompactViewport ? 16 : 12;
+    const maxWidth = Math.max(180, Math.min(canvasRect.width - horizontalGutter * 2, viewportWidth - horizontalGutter * 2));
+    const maxColumnsByWidth = Math.max(2, Math.floor((maxWidth - menuPadding * 2 + chipGap) / (chipSize + chipGap)));
+    const preferredColumns = isCompactViewport ? 4 : 6;
+    const columns = Math.max(2, Math.min(shortcutCount, preferredColumns, maxColumnsByWidth));
+    const rows = Math.ceil(shortcutCount / columns);
+    const estimatedWidth = Math.min(maxWidth, columns * chipSize + Math.max(0, columns - 1) * chipGap + menuPadding * 2);
+    const estimatedHeight = rows * chipSize + Math.max(0, rows - 1) * chipGap + menuPadding * 2;
+    const boxLeft = textBoxRect.left - canvasRect.left;
+    const boxTop = textBoxRect.top - canvasRect.top;
+    const boxBottom = textBoxRect.bottom - canvasRect.top;
+    const anchorCenter = boxLeft + textBoxRect.width / 2;
+    const minCenter = horizontalGutter + estimatedWidth / 2;
+    const maxCenter = canvasRect.width - horizontalGutter - estimatedWidth / 2;
+    const clampedCenter = minCenter <= maxCenter ? Math.min(Math.max(anchorCenter, minCenter), maxCenter) : anchorCenter;
+    const horizontalShift = clampedCenter - anchorCenter;
+    const availableAbove = Math.min(boxTop, textBoxRect.top) - horizontalGutter;
+    const availableBelow = Math.min(canvasRect.height - boxBottom, viewportHeight - textBoxRect.bottom) - horizontalGutter;
+    const placeAbove = availableAbove >= estimatedHeight || availableAbove >= availableBelow;
+
+    return {
+      className: placeAbove ? "floating-text-shortcuts-top" : "floating-text-shortcuts-bottom",
+      style: {
+        ["--floating-text-shortcuts-shift" as string]: `${horizontalShift}px`,
+        width: `${estimatedWidth}px`,
+        gridTemplateColumns: `repeat(${columns}, minmax(${isCompactViewport ? "2.5rem" : "2.35rem"}, 1fr))`
+      } as ReactCSSProperties
+    };
   }
 
   function getFirstAvailableCanvasObjectPosition(targetWidth: number, targetHeight: number, snapOffsetY = 0) {
@@ -5751,6 +5832,7 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                   left: `${textBox.x}px`,
                   top: `${textBox.y}px`,
                   width: `${textBox.width}px`,
+                  zIndex: editingTextBoxId === textBox.id ? 9 : undefined,
                   color: textBox.color,
                   fontSize: `${textBox.fontSize}rem`,
                   fontWeight: textBox.fontWeight,
@@ -5774,61 +5856,79 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                 }}
               >
                 {editingTextBoxId === textBox.id ? (
-                  <>
-                    <div className="floating-text-shortcuts" onMouseDown={(event) => event.stopPropagation()}>
-                      {textBoxShortcuts.map((shortcut) => (
-                        <button
-                          key={shortcut.id}
-                          type="button"
-                          className="floating-text-shortcut"
-                          title={shortcut.hint}
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => insertIntoEditingTextBox(textBox.id, shortcut.content)}
+                  (() => {
+                    const shortcutLayout = getFloatingTextShortcutLayout(textBox.id);
+
+                    return (
+                      <>
+                        <div
+                          className={`floating-text-shortcuts ${shortcutLayout.className}`}
+                          style={shortcutLayout.style}
+                          onMouseDown={(event) => event.stopPropagation()}
                         >
-                          {renderShortcutGlyph(shortcut)}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="text"
-                      className="floating-text-input"
-                      value={textBox.text}
-                      placeholder="Écris ici"
-                      onMouseDown={(event) => {
-                        setCanvasQuickMenu(null);
-                        event.stopPropagation();
-                        selectSingleTextBox(textBox.id);
-                      }}
-                      onFocus={() => {
-                        selectSingleTextBox(textBox.id);
-                      }}
-                      onChange={(event) => {
-                        const nextText = event.target.value;
-                        const minimumWidth = textBox.variant === "note" ? 56 : 100;
+                          {textBoxShortcuts.map((shortcut) => (
+                            <button
+                              key={shortcut.id}
+                              type="button"
+                              className="floating-text-shortcut"
+                              title={shortcut.hint}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => insertIntoEditingTextBox(textBox.id, shortcut.content)}
+                            >
+                              {renderShortcutGlyph(shortcut)}
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          type="text"
+                          className="floating-text-input"
+                          value={textBox.text}
+                          placeholder="Écris ici"
+                          onMouseDown={(event) => {
+                            setCanvasQuickMenu(null);
+                            event.stopPropagation();
+                            selectSingleTextBox(textBox.id);
+                          }}
+                          onFocus={() => {
+                            selectSingleTextBox(textBox.id);
+                          }}
+                          onChange={(event) => {
+                            const nextText = event.target.value;
+                            const minimumWidth = textBox.variant === "note" ? 56 : 100;
 
-                        updateTextBox(textBox.id, {
-                          text: nextText,
-                          width: Math.max(minimumWidth, getTextBoxWidth(nextText))
-                        });
-                      }}
-                      onBlur={(event) => {
-                        if (!event.currentTarget.value.trim()) {
-                          removeTextBox(textBox.id);
-                          setEditingTextBoxId(null);
-                          scheduleTransientHistoryCommit("edit");
-                          return;
-                        }
+                            updateTextBox(textBox.id, {
+                              text: nextText,
+                              width: Math.max(minimumWidth, getTextBoxWidth(nextText))
+                            });
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter") {
+                              return;
+                            }
 
-                        updateTextBox(textBox.id, {
-                          text: event.currentTarget.value.trim(),
-                          width: Math.max(textBox.variant === "note" ? 56 : 36, getTextBoxWidth(event.currentTarget.value))
-                        });
-                        setEditingTextBoxId(null);
-                        clearFloatingSelection();
-                        scheduleTransientHistoryCommit("edit");
-                      }}
-                    />
-                  </>
+                            event.preventDefault();
+                            event.currentTarget.blur();
+                          }}
+                          onBlur={(event) => {
+                            if (!event.currentTarget.value.trim()) {
+                              removeTextBox(textBox.id);
+                              setEditingTextBoxId(null);
+                              scheduleTransientHistoryCommit("edit");
+                              return;
+                            }
+
+                            updateTextBox(textBox.id, {
+                              text: event.currentTarget.value.trim(),
+                              width: Math.max(textBox.variant === "note" ? 56 : 36, getTextBoxWidth(event.currentTarget.value))
+                            });
+                            setEditingTextBoxId(null);
+                            clearFloatingSelection();
+                            scheduleTransientHistoryCommit("edit");
+                          }}
+                        />
+                      </>
+                    );
+                  })()
                 ) : (
                   <div className="floating-text-content">
                     {textBox.text || "Zone de texte"}
