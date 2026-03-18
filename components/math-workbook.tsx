@@ -7290,31 +7290,23 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       <header className={`top-toolbar ${isToolsPanelOpen ? "top-toolbar-open" : ""}`}>
         <div className="top-toolbar-inner">
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">Opérations posées</p>
-            <div className="toolbar-shortcut-group" aria-label="Outils d'insertion">
-              {operationStructuredTools.map((tool) => (
+            <p className="sidebar-block-label">Géométrie</p>
+            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Outils de géométrie">
+              {GEOMETRY_TOOL_OPTIONS.map((tool) => (
                 <button
                   key={tool.id}
                   type="button"
-                  className={`toolbar-shortcut toolbar-shortcut-symbol ${pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id ? "toolbar-shortcut-active" : ""}`}
+                  className={`toolbar-shortcut toolbar-shortcut-symbol sheet-tool-button ${activeGeometryTool === tool.id ? "toolbar-shortcut-active sheet-tool-button-active" : ""}`}
                   aria-label={tool.label}
-                  aria-pressed={pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id}
-                  draggable
+                  aria-pressed={activeGeometryTool === tool.id}
                   title={tool.hint}
-                  onDragStart={(event) => handleToolDragStart({ kind: "structured", toolId: tool.id }, event)}
-                  onDragEnd={handleToolDragEnd}
-                  onClick={() => {
-                    if (shouldIgnoreToolbarClick()) {
-                      return;
-                    }
-
-                    togglePendingInsertTool({ kind: "structured", toolId: tool.id });
-                  }}
+                  onClick={() => toggleGeometryTool(tool.id)}
                 >
-                  {renderStructuredToolGlyph(tool.id)}
+                  {renderGeometryToolGlyph(tool)}
                 </button>
               ))}
             </div>
+            {activeGeometryTool ? <p className="sidebar-helper geometry-panel-helper">{geometryPanelHelper}</p> : null}
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
@@ -7393,23 +7385,31 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">Géométrie précise</p>
-            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Outils de géométrie précise">
-              {GEOMETRY_TOOL_OPTIONS.map((tool) => (
+            <p className="sidebar-block-label">Opérations posées</p>
+            <div className="toolbar-shortcut-group" aria-label="Outils d'insertion">
+              {operationStructuredTools.map((tool) => (
                 <button
                   key={tool.id}
                   type="button"
-                  className={`toolbar-shortcut toolbar-shortcut-symbol sheet-tool-button ${activeGeometryTool === tool.id ? "toolbar-shortcut-active sheet-tool-button-active" : ""}`}
+                  className={`toolbar-shortcut toolbar-shortcut-symbol ${pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id ? "toolbar-shortcut-active" : ""}`}
                   aria-label={tool.label}
-                  aria-pressed={activeGeometryTool === tool.id}
+                  aria-pressed={pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id}
+                  draggable
                   title={tool.hint}
-                  onClick={() => toggleGeometryTool(tool.id)}
+                  onDragStart={(event) => handleToolDragStart({ kind: "structured", toolId: tool.id }, event)}
+                  onDragEnd={handleToolDragEnd}
+                  onClick={() => {
+                    if (shouldIgnoreToolbarClick()) {
+                      return;
+                    }
+
+                    togglePendingInsertTool({ kind: "structured", toolId: tool.id });
+                  }}
                 >
-                  {renderGeometryToolGlyph(tool)}
+                  {renderStructuredToolGlyph(tool.id)}
                 </button>
               ))}
             </div>
-            {activeGeometryTool ? <p className="sidebar-helper geometry-panel-helper">{geometryPanelHelper}</p> : null}
           </div>
 
           <div className="toolbar-row toolbar-row-format sidebar-block sidebar-block-compact" aria-label="Mise en forme">
