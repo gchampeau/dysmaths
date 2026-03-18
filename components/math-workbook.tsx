@@ -527,11 +527,8 @@ const INLINE_SHORTCUT_GROUPS: InlineShortcutGroup[] = [
   {
     name: "Lycée",
     items: [
-      { id: "function", label: "f(x)", hint: "Fonction", content: "f(x) = ", modes: ["lycee"] },
-      { id: "limit", label: "lim", hint: "Limite", content: "lim(x→a)", modes: ["lycee"] },
       { id: "sum", label: "Σ", hint: "Somme", content: "Σ(k=1→n)", modes: ["lycee"] },
       { id: "integral", label: "∫", hint: "Intégrale", content: "∫[a;b]", modes: ["lycee"] },
-      { id: "ln", label: "ln", hint: "Logarithme", content: "ln(x)", modes: ["lycee"] }
     ]
   }
 ];
@@ -5951,24 +5948,6 @@ export function MathWorkbook() {
             </div>
 
             <div className="editor-local-toolbar-group toolbar-advanced-group" aria-label="Outils avancés">
-              <button
-                type="button"
-                className={`toolbar-shortcut toolbar-shortcut-symbol ${pendingInsertTool?.kind === "text" ? "toolbar-shortcut-active" : ""}`}
-                aria-label="Texte"
-                title="Ajouter une zone de texte"
-                aria-pressed={pendingInsertTool?.kind === "text"}
-                onClick={() => togglePendingInsertTool({ kind: "text" })}
-              >
-                T
-              </button>
-              <button
-                type="button"
-                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "note" ? "toolbar-shortcut-active" : ""}`}
-                title="Petit texte"
-                onClick={() => toggleAdvancedToolMode("note")}
-              >
-                t
-              </button>
               <button
                 type="button"
                 className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "select" ? "sheet-tool-button-active" : ""}`}
