@@ -170,7 +170,7 @@ type FloatingSymbol = {
   type: "symbol";
   label: string;
   content: string;
-  kind?: "text" | "sum";
+  kind?: "text" | "sum" | "integral";
   size?: number;
   x: number;
   y: number;
@@ -351,6 +351,7 @@ const CANVAS_LINE_BASELINE_OFFSET_PX = 5;
 const DEFAULT_ACTIVE_COLOR = "#1f2d3d";
 const DEFAULT_HIGHLIGHT_TOOL_COLOR = "rgb(255 226 92)";
 const DEFAULT_SUM_SYMBOL_SIZE = 54;
+const DEFAULT_INTEGRAL_SYMBOL_SIZE = 60;
 const HIGHLIGHT_STROKE_OPACITY = 0.4;
 const HIGHLIGHT_STROKE_WIDTH = 10;
 const MM_TO_PX = 96 / 25.4;
@@ -591,6 +592,23 @@ function renderSumSymbolSvg(size: number) {
     <svg viewBox="0 0 100 120" aria-hidden="true" focusable="false">
       <path
         d="M72 18H28L57 60L28 102H72"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function renderIntegralSymbolSvg(size: number) {
+  const strokeWidth = Math.max(4, Math.round(size * 0.075));
+
+  return (
+    <svg viewBox="0 0 100 140" aria-hidden="true" focusable="false">
+      <path
+        d="M60 16C48 16 40 25 40 38V102C40 116 32 126 20 126"
         fill="none"
         stroke="currentColor"
         strokeWidth={strokeWidth}
@@ -946,13 +964,20 @@ function parseStoredState(raw: string): WriterState | null {
       symbols: Array.isArray(parsed.symbols)
         ? parsed.symbols.map((symbol) => ({
             ...symbol,
-            kind: (symbol as { kind?: unknown }).kind === "sum" ? "sum" : "text",
+            kind:
+              (symbol as { kind?: unknown }).kind === "sum"
+                ? "sum"
+                : (symbol as { kind?: unknown }).kind === "integral"
+                  ? "integral"
+                  : "text",
             size:
               typeof (symbol as { size?: unknown }).size === "number"
                 ? (symbol as { size: number }).size
                 : (symbol as { kind?: unknown }).kind === "sum"
                   ? DEFAULT_SUM_SYMBOL_SIZE
-                  : undefined,
+                  : (symbol as { kind?: unknown }).kind === "integral"
+                    ? DEFAULT_INTEGRAL_SYMBOL_SIZE
+                    : undefined,
             color: typeof symbol.color === "string" ? symbol.color : DEFAULT_ACTIVE_COLOR,
             fontSize: typeof symbol.fontSize === "number" ? symbol.fontSize : defaultFontSize,
             fontWeight: typeof (symbol as { fontWeight?: unknown }).fontWeight === "number" ? (symbol as { fontWeight: number }).fontWeight : 500,
@@ -2657,6 +2682,25 @@ export function MathWorkbook() {
       } satisfies FloatingSymbol;
     }
 
+    if (shortcut.id === "integral") {
+      return {
+        id: createId("symbol"),
+        type: "symbol",
+        label: shortcut.label,
+        content: shortcut.label,
+        kind: "integral",
+        size: DEFAULT_INTEGRAL_SYMBOL_SIZE,
+        x,
+        y,
+        color: state.activeColor,
+        fontSize: defaultFontSize,
+        fontWeight: 500,
+        fontStyle: "normal",
+        underline: false,
+        highlightColor: null
+      } satisfies FloatingSymbol;
+    }
+
     return {
       id: createId("symbol"),
       type: "symbol",
@@ -2675,8 +2719,8 @@ export function MathWorkbook() {
   }
 
   function getFloatingSymbolMeasure(symbol: FloatingSymbol) {
-    if (symbol.kind === "sum") {
-      const size = symbol.size ?? DEFAULT_SUM_SYMBOL_SIZE;
+    if (symbol.kind === "sum" || symbol.kind === "integral") {
+      const size = symbol.size ?? (symbol.kind === "integral" ? DEFAULT_INTEGRAL_SYMBOL_SIZE : DEFAULT_SUM_SYMBOL_SIZE);
       return {
         width: size,
         height: size
@@ -2822,7 +2866,7 @@ export function MathWorkbook() {
   function startSymbolResize(symbolId: string, handle: SymbolResizeHandle, clientX: number, clientY: number) {
     const symbol = stateRef.current.symbols.find((item) => item.id === symbolId);
 
-    if (!symbol || symbol.kind !== "sum") {
+    if (!symbol || (symbol.kind !== "sum" && symbol.kind !== "integral")) {
       return;
     }
 
@@ -2865,7 +2909,7 @@ export function MathWorkbook() {
     setState((current) => ({
       ...current,
       symbols: current.symbols.map((symbol) =>
-        symbol.id === resize.symbolId && symbol.kind === "sum"
+        symbol.id === resize.symbolId && (symbol.kind === "sum" || symbol.kind === "integral")
           ? { ...symbol, x: Math.max(18, Math.min(bounds.width - 24, nextX)), y: Math.max(18, Math.min(bounds.height - 24, nextY)), size: nextSize }
           : symbol
       )
@@ -3385,7 +3429,7 @@ export function MathWorkbook() {
       return;
     }
 
-    if (shortcut.id === "sum") {
+    if (shortcut.id === "sum" || shortcut.id === "integral") {
       const symbol = createFloatingSymbol(shortcut, placement.x, placement.y);
       beginTransientHistorySession("edit");
 
@@ -4310,6 +4354,12 @@ export function MathWorkbook() {
   }
 
   function startDragging(itemType: "block" | "symbol" | "textBox" | "stroke", itemId: string, x: number, y: number, event: ReactMouseEvent<Element>) {
+    const target = event.target as HTMLElement | null;
+
+    if (target?.closest?.(".floating-math-symbol-resize-handle") || symbolResizeRef.current) {
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     startDraggingAtPoint(itemType, itemId, x, y, event.clientX, event.clientY);
@@ -4548,7 +4598,7 @@ export function MathWorkbook() {
       return;
     }
 
-    if (shortcut.id === "sum") {
+    if (shortcut.id === "sum" || shortcut.id === "integral") {
       const symbol = createFloatingSymbol(shortcut, position.x, position.y);
       beginTransientHistorySession("edit");
 
@@ -5686,7 +5736,7 @@ export function MathWorkbook() {
       return;
     }
 
-    if (shortcut.id === "sum") {
+    if (shortcut.id === "sum" || shortcut.id === "integral") {
       const symbol = createFloatingSymbol(shortcut, position.x, position.y);
       beginTransientHistorySession("edit");
 
@@ -6222,9 +6272,9 @@ export function MathWorkbook() {
             ))}
 
             {state.symbols.map((symbol) => {
-              const isSumSymbol = symbol.kind === "sum";
+              const isVectorSymbol = symbol.kind === "sum" || symbol.kind === "integral";
               const isSelected = selectedSymbolIds.includes(symbol.id);
-              const symbolSize = Math.max(24, Math.round(symbol.size ?? symbol.fontSize * 18));
+              const symbolSize = Math.max(24, Math.round(symbol.size ?? (symbol.kind === "integral" ? DEFAULT_INTEGRAL_SYMBOL_SIZE : symbol.fontSize * 18)));
 
               return (
                 <button
@@ -6233,14 +6283,14 @@ export function MathWorkbook() {
                   ref={(node) => {
                     symbolNodeRefs.current[symbol.id] = node;
                   }}
-                  className={`floating-math-symbol ${isSumSymbol ? "floating-math-symbol-sum" : ""} ${isSelected ? "floating-math-symbol-selected" : ""}`}
+                  className={`floating-math-symbol ${isVectorSymbol ? "floating-math-symbol-sum" : ""} ${symbol.kind === "integral" ? "floating-math-symbol-integral" : ""} ${isSelected ? "floating-math-symbol-selected" : ""}`}
                   style={{
                     left: `${symbol.x}px`,
                     top: `${symbol.y}px`,
-                    width: isSumSymbol ? `${symbolSize}px` : undefined,
-                    height: isSumSymbol ? `${symbolSize}px` : undefined,
+                    width: isVectorSymbol ? `${symbolSize}px` : undefined,
+                    height: isVectorSymbol ? `${symbolSize}px` : undefined,
                     color: symbol.color,
-                    fontSize: isSumSymbol ? undefined : `${symbol.fontSize}rem`,
+                    fontSize: isVectorSymbol ? undefined : `${symbol.fontSize}rem`,
                     fontWeight: symbol.fontWeight,
                     fontStyle: symbol.fontStyle,
                     textDecoration: symbol.underline ? "underline" : "none",
@@ -6253,22 +6303,22 @@ export function MathWorkbook() {
                     handleTouchDragStart("symbol", symbol.id, symbol.x, symbol.y, event);
                   }}
                 >
-                  {isSumSymbol ? (
+                  {isVectorSymbol ? (
                     <>
-                      <span className="floating-math-symbol-sum-vector" aria-hidden="true">
-                        {renderSumSymbolSvg(symbolSize)}
+                      <span className={`floating-math-symbol-sum-vector ${symbol.kind === "integral" ? "floating-math-symbol-integral-vector" : ""}`} aria-hidden="true">
+                        {symbol.kind === "integral" ? renderIntegralSymbolSvg(symbolSize) : renderSumSymbolSvg(symbolSize)}
                       </span>
                       {isSelected ? (
                         <>
                           <span
                             className="floating-math-symbol-resize-handle floating-math-symbol-resize-handle-nw"
                             aria-hidden="true"
-                            onMouseDown={(event) => {
+                            onMouseDownCapture={(event) => {
                               event.preventDefault();
                               event.stopPropagation();
                               startSymbolResize(symbol.id, "nw", event.clientX, event.clientY);
                             }}
-                            onTouchStart={(event) => {
+                            onTouchStartCapture={(event) => {
                               const touch = event.touches[0];
 
                               if (!touch) {
@@ -6283,12 +6333,12 @@ export function MathWorkbook() {
                           <span
                             className="floating-math-symbol-resize-handle floating-math-symbol-resize-handle-se"
                             aria-hidden="true"
-                            onMouseDown={(event) => {
+                            onMouseDownCapture={(event) => {
                               event.preventDefault();
                               event.stopPropagation();
                               startSymbolResize(symbol.id, "se", event.clientX, event.clientY);
                             }}
-                            onTouchStart={(event) => {
+                            onTouchStartCapture={(event) => {
                               const touch = event.touches[0];
 
                               if (!touch) {
