@@ -4185,6 +4185,23 @@ export function MathWorkbook() {
     setState(cloneWriterState(next));
   }
 
+  function getFractionBarCenterOffset(node: HTMLElement | null) {
+    if (!node) {
+      return null;
+    }
+
+    const bar = node.querySelector(".fraction-bar") as HTMLElement | null;
+
+    if (!bar) {
+      return null;
+    }
+
+    const nodeRect = node.getBoundingClientRect();
+    const barRect = bar.getBoundingClientRect();
+
+    return barRect.top - nodeRect.top + barRect.height / 2;
+  }
+
   function alignSelectedItems() {
     if (selectedCount < 2) {
       return;
@@ -4203,6 +4220,10 @@ export function MathWorkbook() {
         .map((block) => {
           const node = blockNodeRefs.current[block.id];
           const rect = node?.getBoundingClientRect();
+          const anchorOffsetY =
+            block.type === "fraction"
+              ? Math.max(0, getFractionBarCenterOffset(node) ?? (rect?.height ?? 64) / 2)
+              : (rect?.height ?? 64) / 2;
 
           return {
             id: block.id,
@@ -4210,7 +4231,8 @@ export function MathWorkbook() {
             x: block.x,
             y: block.y,
             width: Math.max(24, rect?.width ?? block.width ?? 64),
-            height: Math.max(24, rect?.height ?? 64)
+            height: Math.max(24, rect?.height ?? 64),
+            anchorOffsetY
           };
         }),
       ...state.symbols
@@ -4226,7 +4248,8 @@ export function MathWorkbook() {
             x: symbol.x,
             y: symbol.y,
             width: Math.max(24, rect?.width ?? symbolMeasure.width),
-            height: Math.max(24, rect?.height ?? symbolMeasure.height)
+            height: Math.max(24, rect?.height ?? symbolMeasure.height),
+            anchorOffsetY: Math.max(24, rect?.height ?? symbolMeasure.height) / 2
           };
         }),
       ...state.textBoxes
@@ -4241,7 +4264,8 @@ export function MathWorkbook() {
             x: textBox.x,
             y: textBox.y,
             width: Math.max(24, rect?.width ?? textBox.width),
-            height: Math.max(24, rect?.height ?? 32)
+            height: Math.max(24, rect?.height ?? 32),
+            anchorOffsetY: Math.max(24, rect?.height ?? 32) / 2
           };
         }),
       ...state.strokes
@@ -4257,7 +4281,8 @@ export function MathWorkbook() {
             x: strokeBounds.x,
             y: strokeBounds.y,
             width: Math.max(24, rect?.width ?? strokeBounds.width),
-            height: Math.max(24, rect?.height ?? strokeBounds.height)
+            height: Math.max(24, rect?.height ?? strokeBounds.height),
+            anchorOffsetY: Math.max(24, rect?.height ?? strokeBounds.height) / 2
           };
         })
     ];
@@ -4311,10 +4336,8 @@ export function MathWorkbook() {
         const row = Math.floor(index / columns);
         const x = snappedLayoutOrigin.x + colWidths.slice(0, col).reduce((sum, width) => sum + width, 0) + spacing * col;
         const rowTop = snappedLayoutOrigin.y + rowHeights.slice(0, row).reduce((sum, height) => sum + height, 0) + spacing * row;
-        const y = rowTop + (rowHeights[row] - item.height) / 2;
-        const snappedPoint = getCanvasPlacementPosition(x, y, canvasBounds.width - item.width - 18, canvasBounds.height - item.height - 18, "strict", {
-          height: item.height
-        });
+        const y = rowTop + rowHeights[row] / 2 - item.anchorOffsetY;
+        const snappedPoint = getExactCanvasPlacementPosition(x, y, canvasBounds.width - item.width - 18, canvasBounds.height - item.height - 18);
 
         return {
           id: item.id,
