@@ -1853,28 +1853,31 @@ input {
 .root-preview {
   display: flex;
   align-items: flex-start;
-  gap: 0.2rem;
+  gap: 0;
   font-family: var(--font-body);
 }
 
 .root-symbol {
   font-size: 1.6em;
   line-height: 0.9;
+  margin-right: -0.08rem;
 }
 
 .root-radicand {
-  padding: 0.45rem 0.8rem 0 0.5rem;
+  display: inline-block;
+  padding: 0.12rem 0.8rem 0 0.36rem;
   border-top: 3px solid currentColor;
   font-size: 1em;
+  line-height: 1.05;
 }
 
 .root-preview-editing {
-  align-items: center;
+  align-items: flex-start;
 }
 
 .root-inline-radicand {
   width: 4.4rem;
-  padding-top: 0.3rem;
+  padding-top: 0.08rem;
 }
 
 .math-result {
