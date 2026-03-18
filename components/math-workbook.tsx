@@ -4337,7 +4337,10 @@ export function MathWorkbook() {
         const x = snappedLayoutOrigin.x + colWidths.slice(0, col).reduce((sum, width) => sum + width, 0) + spacing * col;
         const rowTop = snappedLayoutOrigin.y + rowHeights.slice(0, row).reduce((sum, height) => sum + height, 0) + spacing * row;
         const y = rowTop + rowHeights[row] / 2 - item.anchorOffsetY;
-        const snappedPoint = getExactCanvasPlacementPosition(x, y, canvasBounds.width - item.width - 18, canvasBounds.height - item.height - 18);
+        const snappedPoint = getCanvasPlacementPosition(x, y, canvasBounds.width - item.width - 18, canvasBounds.height - item.height - 18, "strict", {
+          height: item.height,
+          snapOffsetY: 5
+        });
 
         return {
           id: item.id,
