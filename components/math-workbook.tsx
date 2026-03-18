@@ -2745,7 +2745,13 @@ export function MathWorkbook() {
     };
   }
 
-  function createFloatingTextBox(x: number, y: number, variant: "default" | "note" = "default", notation: "plain" | "angle" = "plain") {
+  function createFloatingTextBox(
+    x: number,
+    y: number,
+    variant: "default" | "note" = "default",
+    notation: "plain" | "angle" = "plain",
+    yOffset = FLOATING_TEXTBOX_Y_OFFSET
+  ) {
     const defaultFontSize = getDefaultCanvasFontSize(state.sheetStyle);
     const defaultNoteFontSize = getDefaultNoteFontSize(state.sheetStyle);
     return {
@@ -2761,7 +2767,7 @@ export function MathWorkbook() {
       underline: false,
       highlightColor: null,
       x,
-      y: Math.max(18, y - FLOATING_TEXTBOX_Y_OFFSET),
+      y: Math.max(18, y - yOffset),
       width: variant === "note" ? 72 : 100
     } satisfies FloatingTextBox;
   }
@@ -2774,6 +2780,14 @@ export function MathWorkbook() {
       text: initialText,
       width: Math.max(100, getTextBoxWidth(initialText))
     } satisfies FloatingTextBox;
+  }
+
+  function getExactTextBoxVerticalOffset(variant: "default" | "note" = "default") {
+    const rem = getRemPixels();
+    const fontSize = variant === "note" ? getDefaultNoteFontSize(state.sheetStyle) : getDefaultCanvasFontSize(state.sheetStyle);
+    const estimatedHeightPx = rem * fontSize * 1.4;
+
+    return Math.max(8, Math.round(estimatedHeightPx / 2));
   }
 
   function getCanvasDropPosition(clientX: number, clientY: number, offsetX = 0, offsetY = 0) {
@@ -3231,10 +3245,16 @@ export function MathWorkbook() {
     const bounds = canvas?.getBoundingClientRect();
     const placement =
       mode === "exact"
-        ? getExactCanvasPlacementPosition(x, y + FLOATING_TEXTBOX_Y_OFFSET, (bounds?.width ?? 320) - 24, (bounds?.height ?? 320) - 24)
+        ? getExactCanvasPlacementPosition(x, y, (bounds?.width ?? 320) - 24, (bounds?.height ?? 320) - 24)
         : getCanvasPlacementPosition(x, y, (bounds?.width ?? 320) - 24, (bounds?.height ?? 320) - 24, "soft");
     const textBox = {
-      ...createFloatingTextBox(placement.x, placement.y),
+      ...createFloatingTextBox(
+        placement.x,
+        placement.y,
+        "default",
+        "plain",
+        mode === "exact" ? getExactTextBoxVerticalOffset("default") : FLOATING_TEXTBOX_Y_OFFSET
+      ),
       text: initialText,
       width: Math.max(100, getTextBoxWidth(initialText))
     };

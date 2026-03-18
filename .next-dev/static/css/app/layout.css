@@ -2894,7 +2894,7 @@ input {
   display: block;
   width: 100%;
   min-width: 0;
-  height: 1.4em;
+  height: 1.18em;
   min-height: 0;
   margin: 0;
   border: none;
@@ -2903,8 +2903,8 @@ input {
   background: transparent;
   color: inherit;
   font: inherit;
-  line-height: 1.4;
-  padding: 0 4px;
+  line-height: 1.08;
+  padding: 0 1px;
   text-align: left;
   text-decoration: inherit;
   white-space: nowrap;
