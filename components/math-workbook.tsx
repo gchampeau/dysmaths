@@ -7364,6 +7364,33 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block">
+            <p className="sidebar-block-label">Outils lycée</p>
+            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Raccourcis lycée">
+              {visibleLyceeInlineShortcuts.map((shortcut) => (
+                <button
+                  key={shortcut.id}
+                  type="button"
+                  className={`toolbar-shortcut toolbar-shortcut-symbol ${pendingInsertTool?.kind === "shortcut" && pendingInsertTool.shortcutId === shortcut.id ? "toolbar-shortcut-active" : ""}`}
+                  draggable
+                  title={shortcut.hint}
+                  aria-pressed={pendingInsertTool?.kind === "shortcut" && pendingInsertTool.shortcutId === shortcut.id}
+                  onDragStart={(event) => handleToolDragStart({ kind: "shortcut", shortcutId: shortcut.id }, event)}
+                  onDragEnd={handleToolDragEnd}
+                  onClick={() => {
+                    if (shouldIgnoreToolbarClick()) {
+                      return;
+                    }
+
+                    togglePendingInsertTool({ kind: "shortcut", shortcutId: shortcut.id });
+                  }}
+                >
+                  {renderShortcutGlyph(shortcut)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="toolbar-row toolbar-row-secondary sidebar-block">
             <p className="sidebar-block-label">Géométrie précise</p>
             <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Outils de géométrie précise">
               {GEOMETRY_TOOL_OPTIONS.map((tool) => (
@@ -7422,33 +7449,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 <p className="geometry-settings-note">Les figures sont stockées en millimètres pour rester à l’échelle dans le PDF.</p>
               </div>
             ) : null}
-          </div>
-
-          <div className="toolbar-row toolbar-row-secondary sidebar-block">
-            <p className="sidebar-block-label">Outils lycée</p>
-            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Raccourcis lycée">
-              {visibleLyceeInlineShortcuts.map((shortcut) => (
-                <button
-                  key={shortcut.id}
-                  type="button"
-                  className={`toolbar-shortcut toolbar-shortcut-symbol ${pendingInsertTool?.kind === "shortcut" && pendingInsertTool.shortcutId === shortcut.id ? "toolbar-shortcut-active" : ""}`}
-                  draggable
-                  title={shortcut.hint}
-                  aria-pressed={pendingInsertTool?.kind === "shortcut" && pendingInsertTool.shortcutId === shortcut.id}
-                  onDragStart={(event) => handleToolDragStart({ kind: "shortcut", shortcutId: shortcut.id }, event)}
-                  onDragEnd={handleToolDragEnd}
-                  onClick={() => {
-                    if (shouldIgnoreToolbarClick()) {
-                      return;
-                    }
-
-                    togglePendingInsertTool({ kind: "shortcut", shortcutId: shortcut.id });
-                  }}
-                >
-                  {renderShortcutGlyph(shortcut)}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="toolbar-row toolbar-row-format sidebar-block" aria-label="Mise en forme">
