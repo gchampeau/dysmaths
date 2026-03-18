@@ -1391,6 +1391,15 @@ input {
   white-space: nowrap;
 }
 
+.operation-edit-shell-strike-mode .division-cell-button,
+.operation-edit-shell-strike-mode .addition-number-display-strike-mode,
+.operation-edit-shell-strike-mode .division-number-field-display-strike-mode {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='M4 16 L16 4' stroke='%231f2d3d' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E")
+      10 10,
+    pointer;
+}
+
 .addition-number-field {
   position: relative;
   width: calc((var(--division-columns) * var(--division-cell-size)) + ((var(--division-columns) - 1) * var(--division-cell-gap)));
