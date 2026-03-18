@@ -2881,6 +2881,12 @@ input {
   stroke: rgba(31, 45, 61, 0.76);
 }
 
+.canvas-geometry-compass-arc {
+  stroke: rgba(217, 119, 69, 0.92);
+  stroke-width: 1px;
+  stroke-dasharray: none;
+}
+
 .canvas-geometry-protractor-shell {
   fill: rgba(255, 253, 249, 0.78);
   stroke: rgba(31, 45, 61, 0.22);

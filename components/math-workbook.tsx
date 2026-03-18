@@ -22,7 +22,7 @@ type StudyMode = "college" | "lycee";
 type SheetStyle = "seyes" | "large-grid" | "small-grid" | "lined" | "blank";
 type StructuredTool = "fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root";
 type UtilityMenu = "highlight" | null;
-type GeometryTool = "point" | "segment" | "line" | "ray" | "circle" | "measure" | "protractor";
+type GeometryTool = "point" | "segment" | "line" | "ray" | "circle" | "measure" | "protractor" | "compass";
 
 type FractionBlock = {
   id: string;
@@ -247,8 +247,21 @@ type GeometryCircleShape = {
   strokeWidthMm: number;
 };
 
+type GeometryArcShape = {
+  id: string;
+  type: "geometry";
+  kind: "arc";
+  cxMm: number;
+  cyMm: number;
+  radiusMm: number;
+  startAngle: number;
+  endAngle: number;
+  color: string;
+  strokeWidthMm: number;
+};
+
 type MathBlock = FractionBlock | AdditionBlock | SubtractionBlock | MultiplicationBlock | DivisionBlock | PowerBlock | RootBlock;
-type GeometryShape = GeometryPointShape | GeometryLinearShape | GeometryCircleShape;
+type GeometryShape = GeometryPointShape | GeometryLinearShape | GeometryCircleShape | GeometryArcShape;
 
 type WriterState = {
   title: string;
@@ -393,6 +406,17 @@ type GeometryAngleMeasurement = {
   vertex: GeometryPointCoordinate;
   baseline: GeometryPointCoordinate;
   end: GeometryPointCoordinate;
+};
+
+type GeometryCompassDraft = {
+  phase: "radius" | "arc";
+  center: GeometryPointCoordinate;
+  startPoint: GeometryPointCoordinate | null;
+  radiusMm: number | null;
+  startAngle: number | null;
+  currentAngle: number | null;
+  accumulatedSweep: number;
+  current: GeometryPointCoordinate;
 };
 
 type SnapGuides = {
@@ -575,6 +599,7 @@ const GEOMETRY_TOOL_OPTIONS = [
   { id: "line" as const, label: "Droite", hint: "Tracer une droite", glyph: "↔" },
   { id: "ray" as const, label: "Demi-droite", hint: "Tracer une demi-droite", glyph: "→" },
   { id: "circle" as const, label: "Cercle", hint: "Tracer un cercle", glyph: "◯" },
+  { id: "compass" as const, label: "Compas", hint: "Tracer un cercle avec ouverture mémorisée", glyph: "⌒" },
   { id: "measure" as const, label: "Règle", hint: "Mesurer une distance", glyph: "cm" },
   { id: "protractor" as const, label: "Rapporteur", hint: "Mesurer un angle", glyph: "protractor" }
 ] as const;
@@ -988,6 +1013,58 @@ function getGeometryLinearDirection(shape: GeometryLinearShape) {
   };
 }
 
+function getGeometryAngleFromCenter(center: GeometryPointCoordinate, point: GeometryPointCoordinate) {
+  return Math.atan2(point.yMm - center.yMm, point.xMm - center.xMm);
+}
+
+function normalizeSignedAngleDelta(delta: number) {
+  let normalized = delta;
+
+  while (normalized <= -Math.PI) {
+    normalized += Math.PI * 2;
+  }
+
+  while (normalized > Math.PI) {
+    normalized -= Math.PI * 2;
+  }
+
+  return normalized;
+}
+
+function getGeometryArcRadiusPx(shape: Pick<GeometryArcShape, "radiusMm">) {
+  return mmToPx(shape.radiusMm);
+}
+
+function getGeometryArcPathData(center: GeometryPointCoordinate, radiusMm: number, startAngle: number, endAngle: number) {
+  const radiusPx = mmToPx(radiusMm);
+  const delta = Math.max(-Math.PI * 2, Math.min(Math.PI * 2, endAngle - startAngle));
+
+  if (Math.abs(delta) >= Math.PI * 2 - 0.001) {
+    const start = getGeometryPolarPoint(center, radiusPx, startAngle);
+    const mid = getGeometryPolarPoint(center, radiusPx, startAngle + Math.PI);
+    return {
+      radiusPx,
+      delta,
+      start,
+      end: start,
+      path: `M ${start.x} ${start.y} A ${radiusPx} ${radiusPx} 0 1 1 ${mid.x} ${mid.y} A ${radiusPx} ${radiusPx} 0 1 1 ${start.x} ${start.y}`
+    };
+  }
+
+  const start = getGeometryPolarPoint(center, radiusPx, startAngle);
+  const end = getGeometryPolarPoint(center, radiusPx, startAngle + delta);
+  const largeArcFlag = Math.abs(delta) > Math.PI ? 1 : 0;
+  const sweepFlag = delta >= 0 ? 1 : 0;
+
+  return {
+    radiusPx,
+    delta,
+    start,
+    end,
+    path: `M ${start.x} ${start.y} A ${radiusPx} ${radiusPx} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`
+  };
+}
+
 function dedupeGeometryRenderPoints(points: Array<{ x: number; y: number; t: number }>) {
   return points.filter(
     (point, index) =>
@@ -1107,6 +1184,18 @@ function getGeometryShapeBoundsPx(shape: GeometryShape, canvasWidth: number, can
     };
   }
 
+  if (shape.kind === "arc") {
+    const radius = mmToPx(shape.radiusMm);
+    const x = mmToPx(shape.cxMm);
+    const y = mmToPx(shape.cyMm);
+    return {
+      x: x - radius,
+      y: y - radius,
+      width: radius * 2,
+      height: radius * 2
+    };
+  }
+
   const rendered = getRenderedLinearGeometryPx(shape, canvasWidth, canvasHeight);
 
   if (!rendered) {
@@ -1133,6 +1222,14 @@ function translateGeometryShape(shape: GeometryShape, deltaXMm: number, deltaYMm
   }
 
   if (shape.kind === "circle") {
+    return {
+      ...shape,
+      cxMm: shape.cxMm + deltaXMm,
+      cyMm: shape.cyMm + deltaYMm
+    };
+  }
+
+  if (shape.kind === "arc") {
     return {
       ...shape,
       cxMm: shape.cxMm + deltaXMm,
@@ -1229,7 +1326,7 @@ function getGeometryProtractorPaths(vertex: GeometryPointCoordinate, baseline: G
 }
 
 function isGeometryConstructionTool(tool: GeometryTool | null) {
-  return tool === "point" || tool === "segment" || tool === "line" || tool === "ray" || tool === "circle";
+  return tool === "point" || tool === "segment" || tool === "line" || tool === "ray" || tool === "circle" || tool === "compass";
 }
 
 function getSnapPointOnRayPx(pointX: number, pointY: number, vertex: GeometryPointCoordinate, rayPoint: GeometryPointCoordinate) {
@@ -1448,6 +1545,25 @@ function parseStoredState(raw: string): WriterState | null {
                     radiusMm: Math.max(0.5, shape.radiusMm),
                     strokeWidthMm: typeof shape.strokeWidthMm === "number" ? shape.strokeWidthMm : DEFAULT_GEOMETRY_STROKE_WIDTH_MM
                   } satisfies GeometryCircleShape);
+                }
+
+                return accumulator;
+              }
+
+              if (shape.kind === "arc") {
+                if (
+                  typeof shape.cxMm === "number" &&
+                  typeof shape.cyMm === "number" &&
+                  typeof shape.radiusMm === "number" &&
+                  typeof shape.startAngle === "number" &&
+                  typeof shape.endAngle === "number"
+                ) {
+                  accumulator.push({
+                    ...shape,
+                    color: typeof shape.color === "string" ? shape.color : DEFAULT_ACTIVE_COLOR,
+                    radiusMm: Math.max(0.5, shape.radiusMm),
+                    strokeWidthMm: typeof shape.strokeWidthMm === "number" ? shape.strokeWidthMm : DEFAULT_GEOMETRY_STROKE_WIDTH_MM
+                  } satisfies GeometryArcShape);
                 }
 
                 return accumulator;
@@ -2238,6 +2354,7 @@ export function MathWorkbook() {
   const [geometryMeasurement, setGeometryMeasurement] = useState<GeometryMeasurement | null>(null);
   const [geometryProtractorDraft, setGeometryProtractorDraft] = useState<GeometryProtractorDraft | null>(null);
   const [geometryAngleMeasurement, setGeometryAngleMeasurement] = useState<GeometryAngleMeasurement | null>(null);
+  const [geometryCompassDraft, setGeometryCompassDraft] = useState<GeometryCompassDraft | null>(null);
   const [pendingInsertTool, setPendingInsertTool] = useState<PendingInsertTool>(null);
   const [insertCursorPreview, setInsertCursorPreview] = useState<InsertCursorPreview>({ x: 0, y: 0, visible: false });
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(false);
@@ -2282,6 +2399,7 @@ export function MathWorkbook() {
   const geometryDraftRef = useRef<GeometryDraft | null>(null);
   const geometryProtractorDraftRef = useRef<GeometryProtractorDraft | null>(null);
   const geometryAngleMeasurementRef = useRef<GeometryAngleMeasurement | null>(null);
+  const geometryCompassDraftRef = useRef<GeometryCompassDraft | null>(null);
   const editingBlockRef = useRef<EditingBlockState>(null);
   const recentInlineBlockInteractionRef = useRef<{ blockId: string; timeStamp: number } | null>(null);
   const symbolResizeRef = useRef<SymbolResizeState | null>(null);
@@ -2381,6 +2499,18 @@ export function MathWorkbook() {
       return "Clique un point sur le second côté pour figer la mesure.";
     }
 
+    if (activeGeometryTool === "compass") {
+      if (!geometryCompassDraft) {
+        return "Clique le centre du cercle.";
+      }
+
+      if (geometryCompassDraft.phase === "radius") {
+        return "Déplace la souris pour régler l’ouverture, puis clique pour commencer l’arc.";
+      }
+
+      return "Déplace la souris pour agrandir ou réduire l’arc, puis clique pour le terminer.";
+    }
+
     if (geometryDraft) {
       if (activeGeometryTool === "measure") {
         return "Clique un second point pour figer la mesure.";
@@ -2400,7 +2530,7 @@ export function MathWorkbook() {
       : activeGeometryTool === "circle"
         ? "Clique la feuille pour placer le centre du cercle."
         : "Clique la feuille pour placer le premier point.";
-  }, [activeGeometryTool, geometryDraft, geometryProtractorDraft]);
+  }, [activeGeometryTool, geometryCompassDraft, geometryDraft, geometryProtractorDraft]);
   const geometryDraftIndicator = useMemo<GeometryDraftIndicator | null>(() => {
     if (activeGeometryTool === "protractor" && geometryProtractorDraft?.vertex) {
       const currentX = mmToPx(geometryProtractorDraft.current.xMm);
@@ -2410,6 +2540,27 @@ export function MathWorkbook() {
         x: currentX,
         y: currentY,
         label: `${Math.round(getGeometryAngleDegrees(geometryProtractorDraft.vertex, geometryProtractorDraft.firstPoint, geometryProtractorDraft.current))}°`
+      };
+    }
+
+    if (activeGeometryTool === "compass" && geometryCompassDraft) {
+      const currentX = mmToPx(geometryCompassDraft.current.xMm);
+      const currentY = mmToPx(geometryCompassDraft.current.yMm);
+
+      if (geometryCompassDraft.phase === "radius") {
+        return {
+          x: currentX,
+          y: currentY,
+          label: `r ${Math.round(
+            Math.hypot(geometryCompassDraft.current.xMm - geometryCompassDraft.center.xMm, geometryCompassDraft.current.yMm - geometryCompassDraft.center.yMm)
+          )} mm`
+        };
+      }
+
+      return {
+        x: currentX,
+        y: currentY,
+        label: `${Math.round((Math.abs(geometryCompassDraft.accumulatedSweep) * 180) / Math.PI)}°`
       };
     }
 
@@ -2434,7 +2585,7 @@ export function MathWorkbook() {
       y: currentY,
       label: `${Math.max(0, Math.round(lengthMm))} mm`
     };
-  }, [activeGeometryTool, geometryDraft, geometryProtractorDraft]);
+  }, [activeGeometryTool, geometryCompassDraft, geometryDraft, geometryProtractorDraft]);
   const selectedHighlightColor = useMemo(() => {
     const selectedItems = [
       ...state.blocks.filter((block) => selectedBlockIds.includes(block.id)).map((block) => block.highlightColor ?? ""),
@@ -2621,6 +2772,10 @@ export function MathWorkbook() {
   useEffect(() => {
     geometryAngleMeasurementRef.current = geometryAngleMeasurement;
   }, [geometryAngleMeasurement]);
+
+  useEffect(() => {
+    geometryCompassDraftRef.current = geometryCompassDraft;
+  }, [geometryCompassDraft]);
 
   useEffect(() => {
     editingBlockRef.current = editingBlock;
@@ -2900,31 +3055,7 @@ export function MathWorkbook() {
         return;
       }
 
-      if (geometryProtractorDraftRef.current && !dragRef.current && !pendingSelectionRef.current && !isDrawingStrokeRef.current) {
-        const snappedPoint = getGeometrySnapPoint(clientX, clientY);
-        setGeometryProtractorDraft((current) =>
-          current
-            ? {
-                ...current,
-                current: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
-              }
-            : current
-        );
-        setSnapGuides(snappedPoint.guides);
-        return;
-      }
-
-      if (geometryDraftRef.current && !dragRef.current && !pendingSelectionRef.current && !isDrawingStrokeRef.current) {
-        const snappedPoint = getGeometrySnapPoint(clientX, clientY);
-        setGeometryDraft((current) =>
-          current
-            ? {
-                ...current,
-                current: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
-              }
-            : current
-        );
-        setSnapGuides(snappedPoint.guides);
+      if (updateGeometryToolPreview(clientX, clientY)) {
         return;
       }
 
@@ -3102,7 +3233,15 @@ export function MathWorkbook() {
     }
 
     function handleTouchMove(event: TouchEvent) {
-      if (!isDrawingStrokeRef.current && !pendingSelectionRef.current && !dragRef.current && !symbolResizeRef.current && !geometryDraftRef.current && !geometryProtractorDraftRef.current) {
+      if (
+        !isDrawingStrokeRef.current &&
+        !pendingSelectionRef.current &&
+        !dragRef.current &&
+        !symbolResizeRef.current &&
+        !geometryDraftRef.current &&
+        !geometryProtractorDraftRef.current &&
+        !geometryCompassDraftRef.current
+      ) {
         return;
       }
 
@@ -3712,8 +3851,77 @@ export function MathWorkbook() {
     };
   }
 
-  function createGeometryShapeFromDraft(draft: GeometryDraft): GeometryShape | null {
-    if (draft.tool === "measure") {
+  function updateGeometryToolPreview(clientX: number, clientY: number) {
+    if (geometryProtractorDraftRef.current && !dragRef.current && !pendingSelectionRef.current && !isDrawingStrokeRef.current) {
+      const snappedPoint = getGeometrySnapPoint(clientX, clientY);
+      setGeometryProtractorDraft((current) =>
+        current
+          ? {
+              ...current,
+              current: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
+            }
+          : current
+      );
+      setSnapGuides(snappedPoint.guides);
+      return true;
+    }
+
+    if (geometryCompassDraftRef.current && !dragRef.current && !pendingSelectionRef.current && !isDrawingStrokeRef.current) {
+      const snappedPoint = getGeometrySnapPoint(clientX, clientY);
+      setGeometryCompassDraft((current) =>
+        current
+          ? {
+              ...(() => {
+                if (current.phase === "radius") {
+                  return {
+                    ...current,
+                    current: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
+                  };
+                }
+
+                const nextAngle = getGeometryAngleFromCenter(current.center, { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm });
+                const previousAngle = current.currentAngle ?? current.startAngle ?? nextAngle;
+                const delta = normalizeSignedAngleDelta(nextAngle - previousAngle);
+                const radiusMm = current.radiusMm ?? Math.hypot(current.current.xMm - current.center.xMm, current.current.yMm - current.center.yMm);
+                const clampedSweep = Math.max(-Math.PI * 2, Math.min(Math.PI * 2, current.accumulatedSweep + delta));
+                const projectedPoint = {
+                  xMm: current.center.xMm + Math.cos(nextAngle) * radiusMm,
+                  yMm: current.center.yMm + Math.sin(nextAngle) * radiusMm
+                };
+
+                return {
+                  ...current,
+                  current: projectedPoint,
+                  currentAngle: nextAngle,
+                  accumulatedSweep: clampedSweep
+                };
+              })()
+            }
+          : current
+      );
+      setSnapGuides(snappedPoint.guides);
+      return true;
+    }
+
+    if (geometryDraftRef.current && !dragRef.current && !pendingSelectionRef.current && !isDrawingStrokeRef.current) {
+      const snappedPoint = getGeometrySnapPoint(clientX, clientY);
+      setGeometryDraft((current) =>
+        current
+          ? {
+              ...current,
+              current: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
+            }
+          : current
+      );
+      setSnapGuides(snappedPoint.guides);
+      return true;
+    }
+
+    return false;
+  }
+
+function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometryShape, GeometryArcShape> | null {
+    if (draft.tool === "measure" || draft.tool === "protractor" || draft.tool === "compass") {
       return null;
     }
 
@@ -3775,6 +3983,7 @@ export function MathWorkbook() {
   function clearGeometryDraftState() {
     setGeometryDraft(null);
     setGeometryProtractorDraft(null);
+    setGeometryCompassDraft(null);
     setSnapGuides({ x: null, y: null });
   }
 
@@ -3786,17 +3995,53 @@ export function MathWorkbook() {
     setSelectedStrokeIds([]);
   }
 
-  function insertGeometryShape(shape: GeometryShape) {
+  function insertGeometryShape(shape: GeometryShape, options?: { selectAfterInsert?: boolean }) {
+    const selectAfterInsert = options?.selectAfterInsert ?? true;
     beginTransientHistorySession("edit");
     setState((current) => ({
       ...current,
       geometry: [...current.geometry, shape]
     }));
-    selectSingleGeometry(shape.id);
+    if (selectAfterInsert) {
+      selectSingleGeometry(shape.id);
+    }
     setCanvasQuickMenu(null);
     setActiveGeometryTool(null);
     clearGeometryDraftState();
     scheduleTransientHistoryCommit("edit");
+  }
+
+  function insertCompassArcFromSweep(center: GeometryPointCoordinate, radiusMm: number, startAngle: number, sweepAngle: number) {
+    if (radiusMm < 0.8) {
+      return;
+    }
+
+    if (Math.abs(sweepAngle) >= Math.PI * 2 - 0.18) {
+      insertGeometryShape({
+        id: createId("geometry"),
+        type: "geometry",
+        kind: "circle",
+        cxMm: center.xMm,
+        cyMm: center.yMm,
+        radiusMm,
+        color: stateRef.current.activeColor,
+        strokeWidthMm: DEFAULT_GEOMETRY_STROKE_WIDTH_MM
+      }, { selectAfterInsert: false });
+      return;
+    }
+
+    insertGeometryShape({
+      id: createId("geometry"),
+      type: "geometry",
+      kind: "arc",
+      cxMm: center.xMm,
+      cyMm: center.yMm,
+      radiusMm,
+      startAngle,
+      endAngle: startAngle + sweepAngle,
+      color: stateRef.current.activeColor,
+      strokeWidthMm: DEFAULT_GEOMETRY_STROKE_WIDTH_MM
+    }, { selectAfterInsert: false });
   }
 
   function updateGeometryShape(shapeId: string, updater: (shape: GeometryShape) => GeometryShape) {
@@ -3938,6 +4183,54 @@ export function MathWorkbook() {
         end: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
       });
       clearGeometryDraftState();
+      return true;
+    }
+
+    if (tool === "compass") {
+      setGeometryMeasurement(null);
+      const currentDraft = geometryCompassDraftRef.current;
+
+      if (!currentDraft) {
+        setGeometryCompassDraft({
+          phase: "radius",
+          center: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm },
+          startPoint: null,
+          radiusMm: null,
+          startAngle: null,
+          currentAngle: null,
+          accumulatedSweep: 0,
+          current: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
+        });
+        return true;
+      }
+
+      if (currentDraft.phase === "radius") {
+        const radiusMm = Math.hypot(snappedPoint.xMm - currentDraft.center.xMm, snappedPoint.yMm - currentDraft.center.yMm);
+
+        if (radiusMm < 0.8) {
+          clearGeometryDraftState();
+          return true;
+        }
+
+        const startAngle = getGeometryAngleFromCenter(currentDraft.center, { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm });
+        setGeometryCompassDraft({
+          ...currentDraft,
+          phase: "arc",
+          startPoint: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm },
+          radiusMm,
+          startAngle,
+          currentAngle: startAngle,
+          accumulatedSweep: 0,
+          current: { xMm: snappedPoint.xMm, yMm: snappedPoint.yMm }
+        });
+        return true;
+      }
+
+      if (currentDraft.startPoint && currentDraft.radiusMm && currentDraft.startAngle !== null) {
+        insertCompassArcFromSweep(currentDraft.center, currentDraft.radiusMm, currentDraft.startAngle, currentDraft.accumulatedSweep);
+      } else {
+        clearGeometryDraftState();
+      }
       return true;
     }
 
@@ -7533,6 +7826,9 @@ export function MathWorkbook() {
             {activeGeometryTool ? (
               <div
                 className="canvas-geometry-tool-capture"
+                onMouseMove={(event) => {
+                  updateGeometryToolPreview(event.clientX, event.clientY);
+                }}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -7548,6 +7844,16 @@ export function MathWorkbook() {
                   event.preventDefault();
                   event.stopPropagation();
                   handleGeometrySurfacePointer(touch.clientX, touch.clientY);
+                }}
+                onTouchMove={(event) => {
+                  const touch = event.touches[0];
+
+                  if (!touch) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  updateGeometryToolPreview(touch.clientX, touch.clientY);
                 }}
               />
             ) : null}
@@ -7632,6 +7938,39 @@ export function MathWorkbook() {
                           {measurement}
                         </text>
                       ) : null}
+                    </g>
+                  );
+                }
+
+                if (shape.kind === "arc") {
+                  const arc = getGeometryArcPathData(
+                    { xMm: shape.cxMm, yMm: shape.cyMm },
+                    shape.radiusMm,
+                    shape.startAngle,
+                    shape.endAngle
+                  );
+
+                  return (
+                    <g
+                      key={shape.id}
+                      ref={(node) => {
+                        geometryNodeRefs.current[shape.id] = node;
+                      }}
+                      className={`canvas-geometry-shape ${isSelected ? "canvas-geometry-shape-selected" : ""}`}
+                      onMouseDown={(event) => {
+                        if (activeGeometryTool) {
+                          return;
+                        }
+
+                        startDragging("geometry", shape.id, bounds.x, bounds.y, event);
+                      }}
+                      onTouchStart={(event) => {
+                        handleTouchDragStart("geometry", shape.id, bounds.x, bounds.y, event, Boolean(activeGeometryTool));
+                      }}
+                    >
+                      <path className="canvas-geometry-hit" d={arc.path} fill="none" />
+                      <path className="canvas-geometry-line" d={arc.path} fill="none" stroke={shape.color} strokeWidth={1} />
+                      {isSelected ? <path className="canvas-geometry-selection-ring" d={arc.path} fill="none" /> : null}
                     </g>
                   );
                 }
@@ -7759,6 +8098,63 @@ export function MathWorkbook() {
               {geometryProtractorDraft?.vertex
                 ? renderProtractorOverlay(geometryProtractorDraft.vertex, geometryProtractorDraft.firstPoint, geometryProtractorDraft.current, "draft")
                 : null}
+              {geometryCompassDraft ? (
+                (() => {
+                  const centerX = mmToPx(geometryCompassDraft.center.xMm);
+                  const centerY = mmToPx(geometryCompassDraft.center.yMm);
+
+                  if (geometryCompassDraft.phase === "radius") {
+                    return (
+                      <>
+                        <circle className="canvas-geometry-point" cx={centerX} cy={centerY} r={mmToPx(GEOMETRY_POINT_RADIUS_MM)} />
+                        <line
+                          className="canvas-geometry-preview canvas-geometry-measure-line"
+                          x1={centerX}
+                          y1={centerY}
+                          x2={mmToPx(geometryCompassDraft.current.xMm)}
+                          y2={mmToPx(geometryCompassDraft.current.yMm)}
+                        />
+                      </>
+                    );
+                  }
+
+                  if (!geometryCompassDraft.startPoint || geometryCompassDraft.radiusMm === null || geometryCompassDraft.startAngle === null) {
+                    return null;
+                  }
+
+                  const radiusMm = Math.hypot(
+                    geometryCompassDraft.startPoint.xMm - geometryCompassDraft.center.xMm,
+                    geometryCompassDraft.startPoint.yMm - geometryCompassDraft.center.yMm
+                  );
+                  const arc = getGeometryArcPathData(
+                    geometryCompassDraft.center,
+                    radiusMm,
+                    geometryCompassDraft.startAngle,
+                    geometryCompassDraft.startAngle + geometryCompassDraft.accumulatedSweep
+                  );
+
+                  return (
+                    <>
+                      <circle className="canvas-geometry-point" cx={centerX} cy={centerY} r={mmToPx(GEOMETRY_POINT_RADIUS_MM)} />
+                      <line
+                        className="canvas-geometry-preview canvas-geometry-measure-line"
+                        x1={centerX}
+                        y1={centerY}
+                        x2={mmToPx(geometryCompassDraft.startPoint.xMm)}
+                        y2={mmToPx(geometryCompassDraft.startPoint.yMm)}
+                      />
+                      <line
+                        className="canvas-geometry-preview canvas-geometry-measure-line"
+                        x1={centerX}
+                        y1={centerY}
+                        x2={mmToPx(geometryCompassDraft.current.xMm)}
+                        y2={mmToPx(geometryCompassDraft.current.yMm)}
+                      />
+                      <path className="canvas-geometry-preview canvas-geometry-compass-arc" d={arc.path} fill="none" />
+                    </>
+                  );
+                })()
+              ) : null}
             </svg>
 
             {state.blocks.map((block) => (
