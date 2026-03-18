@@ -1733,6 +1733,7 @@ export function MathWorkbook() {
   const symbolsRef = useRef<FloatingSymbol[]>([]);
   const textBoxesRef = useRef<FloatingTextBox[]>([]);
   const strokesRef = useRef<FreehandStroke[]>([]);
+  const strikeModeBlockIdRef = useRef<string | null>(null);
   const selectedBlockIdsRef = useRef<string[]>([]);
   const selectedSymbolIdsRef = useRef<string[]>([]);
   const selectedTextBoxIdsRef = useRef<string[]>([]);
@@ -1928,6 +1929,10 @@ export function MathWorkbook() {
   useEffect(() => {
     editingBlockRef.current = editingBlock;
   }, [editingBlock]);
+
+  useEffect(() => {
+    strikeModeBlockIdRef.current = strikeModeBlockId;
+  }, [strikeModeBlockId]);
 
   useEffect(() => {
     if (!editingBlock) {
@@ -2164,7 +2169,7 @@ export function MathWorkbook() {
     }
 
     input.select();
-  }, [editingBlock, numericFieldCaretPositions]);
+  }, [editingBlock, numericFieldCaretPositions, strikeModeBlockId]);
 
   useEffect(() => {
     const element = editorRef.current;
@@ -4485,6 +4490,10 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
         }
 
         setTimeout(() => {
+          if (strikeModeBlockIdRef.current === block.id) {
+            return;
+          }
+
           const latestEditingBlock = editingBlockRef.current;
 
           if (latestEditingBlock?.blockId === block.id && latestEditingBlock.field === field) {
@@ -4612,25 +4621,6 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
         const showCarryRow = hasArithmeticCarryCells(carryCells) || activeCarryMatch !== null;
 
         if (showCarryRow) {
-          if (isStrikeModeActive) {
-            return (
-              <div className="addition-line addition-line-carry">
-                <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-                {renderArithmeticCarryRow(carryCells, columns, "addition-row addition-carry-row", targetCellIndex, {
-                  field: carryField,
-                  struckCells: arithmeticBlock.struckCells,
-                  onCellToggle: (cellIndex, cellValue) => {
-                    if (!cellValue.trim()) {
-                      return;
-                    }
-
-                    toggleInlineBlockCellStrike(arithmeticBlock.id, carryField, cellIndex);
-                  }
-                })}
-              </div>
-            );
-          }
-
           return (
             <div className="addition-line addition-line-carry">
               <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
@@ -4640,13 +4630,35 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                   const isActive = activeOffset === offsetFromRight;
                   const carryCellValue = getArithmeticCarryCell(carryCells, offsetFromRight);
                   const isStruck = hasStruckCell(arithmeticBlock.struckCells, carryField, offsetFromRight);
+                  const isTargetCell = typeof targetCellIndex === "number" && targetCellIndex === index;
+                  const cellClassName = `division-cell division-cell-button addition-carry-cell addition-carry-cell-display ${isActive || isTargetCell ? "division-cell-target" : ""} ${isStruck ? "division-cell-struck" : ""}`;
+                  const handleCellPointerDown = (event: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>) => {
+                    event.preventDefault();
+                    event.stopPropagation();
 
-                  if (isActive) {
-                    return (
-                      <span key={index} className={`division-cell addition-carry-cell division-cell-target addition-carry-cell-editing ${isStruck ? "division-cell-struck" : ""}`}>
-                        <span className="addition-carry-input-ghost" aria-hidden="true">
-                          {carryCellValue}
-                        </span>
+                    if (isStrikeModeActive) {
+                      if (!carryCellValue.trim()) {
+                        return;
+                      }
+
+                      toggleInlineBlockCellStrike(arithmeticBlock.id, carryField, offsetFromRight);
+                      return;
+                    }
+
+                    activateCarryEditing(carryField, offsetFromRight);
+                  };
+
+                  return (
+                    <div key={index} className={`addition-carry-cell-editor ${isActive ? "addition-carry-cell-editor-active" : ""}`}>
+                      <button
+                        type="button"
+                        className={cellClassName}
+                        onMouseDown={handleCellPointerDown}
+                        onTouchStart={handleCellPointerDown}
+                      >
+                        {carryCellValue}
+                      </button>
+                      {isActive && !isStrikeModeActive ? (
                         <input
                           ref={(node) => {
                             blockInputRefs.current[arithmeticBlock.id] = {
@@ -4669,6 +4681,10 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                             }
 
                             setTimeout(() => {
+                              if (strikeModeBlockIdRef.current === arithmeticBlock.id) {
+                                return;
+                              }
+
                               const latestEditingBlock = editingBlockRef.current;
 
                               if (latestEditingBlock?.blockId === arithmeticBlock.id && latestEditingBlock.field === `${carryField}:${offsetFromRight}`) {
@@ -4694,27 +4710,8 @@ function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number
                             }
                           }}
                         />
-                      </span>
-                    );
-                  }
-
-                  return (
-                    <button
-                      key={index}
-                      type="button"
-                      className={`division-cell division-cell-button addition-carry-cell ${typeof targetCellIndex === "number" && targetCellIndex === index ? "addition-carry-cell-target" : ""} ${isStruck ? "division-cell-struck" : ""}`}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        activateCarryEditing(carryField, offsetFromRight);
-                      }}
-                      onTouchStart={(event) => {
-                        event.stopPropagation();
-                        activateCarryEditing(carryField, offsetFromRight);
-                      }}
-                    >
-                      {carryCellValue}
-                    </button>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>
