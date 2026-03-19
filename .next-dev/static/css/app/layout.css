@@ -1584,8 +1584,8 @@ input {
   column-gap: 0.28rem;
 }
 
-.division-work-line-operation .division-workpad,
-.division-work-line-operation .division-cell-row {
+.division-work-line-operation-complete .division-workpad,
+.division-work-line-operation-complete .division-cell-row {
   border-bottom: 4px solid #2f9d4b;
   padding-bottom: 0.26rem;
 }

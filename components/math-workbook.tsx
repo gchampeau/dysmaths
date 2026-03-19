@@ -2162,17 +2162,26 @@ function renderMathPreview(block: MathBlock) {
               <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />
               {renderDivisionCellRow(block.dividend, leftColumns, "division-dividend division-row-preview", "start", undefined, { field: "dividend", struckCells: block.struckCells })}
             </div>
-            <div className="division-work-grid">
-              {workLines.map((line, index) => (
-                <div
-                  key={index}
-                  className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
-                >
-                  {index % 2 === 0 ? <span className="division-work-minus">-</span> : <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />}
-                  {renderDivisionCellRow(line, leftColumns, "division-workpad division-row-preview", "start", undefined, { field: `work:${index}`, struckCells: block.struckCells })}
-                </div>
-              ))}
-            </div>
+              <div className="division-work-grid">
+                {workLines.map((line, index) => (
+                  (() => {
+                    if (index % 2 === 0 && line.trim().length === 0) {
+                      return null;
+                    }
+
+                    const shouldShowResultLine = index % 2 === 0 && (workLines[index + 1] ?? "").trim().length > 0;
+                    return (
+                  <div
+                    key={index}
+                    className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${shouldShowResultLine ? "division-work-line-operation-complete" : ""} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
+                  >
+                    {index % 2 === 0 ? <span className="division-work-minus">-</span> : <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />}
+                    {renderDivisionCellRow(line, leftColumns, "division-workpad division-row-preview", "start", undefined, { field: `work:${index}`, struckCells: block.struckCells })}
+                  </div>
+                    );
+                  })()
+                ))}
+              </div>
           </div>
           <div className="division-right-column">
             {renderDivisionCellRow(block.divisor, divisorColumns, "division-divisor division-row-preview", "start", undefined, { field: "divisor", struckCells: block.struckCells })}
@@ -6206,13 +6215,22 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               </div>
               <div className="division-work-grid">
                 {workLines.map((line, index) => (
+                  (() => {
+                    if (index % 2 === 0 && line.trim().length === 0) {
+                      return null;
+                    }
+
+                    const shouldShowResultLine = index % 2 === 0 && (workLines[index + 1] ?? "").trim().length > 0;
+                    return (
                   <div
                     key={index}
-                    className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
+                    className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${shouldShowResultLine ? "division-work-line-operation-complete" : ""} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
                   >
                     {index % 2 === 0 ? <span className="division-work-minus">-</span> : <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />}
                     {renderBlockPreviewButton(block.id, `work:${index}`, renderDivisionCellRow(line, leftColumns, "division-workpad division-row-preview", "start", undefined, { field: `work:${index}`, struckCells: block.struckCells }), "division-row-button")}
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             </div>
@@ -6769,9 +6787,12 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               </div>
               <div className="division-work-grid">
                 {divisionWorkLines.map((line, index) => (
+                  (() => {
+                    const shouldShowResultLine = index % 2 === 0 && (divisionWorkLines[index + 1] ?? "").trim().length > 0;
+                    return (
                   <div
                     key={index}
-                    className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
+                    className={`division-work-line ${index % 2 === 0 ? "division-work-line-operation" : "division-work-line-result"} ${shouldShowResultLine ? "division-work-line-operation-complete" : ""} ${line.trim().length === 0 ? "division-work-line-pending" : ""}`}
                   >
                     {index % 2 === 0 ? <span className="division-work-minus">-</span> : <span className="division-work-minus division-work-minus-spacer" aria-hidden="true" />}
                     {renderDivisionEditableRow(`work:${index}`, line, leftColumns, "division-workpad", (nextValue) =>
@@ -6785,6 +6806,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                       }))
                     )}
                   </div>
+                    );
+                  })()
                   ))}
               </div>
             </div>
@@ -7379,6 +7402,34 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
+            <p className="sidebar-block-label">Opérations posées</p>
+            <div className="toolbar-shortcut-group" aria-label="Outils d'insertion">
+              {operationStructuredTools.map((tool) => (
+                <button
+                  key={tool.id}
+                  type="button"
+                  className={`toolbar-shortcut toolbar-shortcut-symbol ${pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id ? "toolbar-shortcut-active" : ""}`}
+                  aria-label={tool.label}
+                  aria-pressed={pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id}
+                  draggable
+                  title={tool.hint}
+                  onDragStart={(event) => handleToolDragStart({ kind: "structured", toolId: tool.id }, event)}
+                  onDragEnd={handleToolDragEnd}
+                  onClick={() => {
+                    if (shouldIgnoreToolbarClick()) {
+                      return;
+                    }
+
+                    togglePendingInsertTool({ kind: "structured", toolId: tool.id });
+                  }}
+                >
+                  {renderStructuredToolGlyph(tool.id)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
             <p className="sidebar-block-label">Symboles courants</p>
             <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Raccourcis symboles courants">
               {rootStructuredTool ? (
@@ -7448,34 +7499,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                   }}
                 >
                   {renderShortcutGlyph(shortcut)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">Opérations posées</p>
-            <div className="toolbar-shortcut-group" aria-label="Outils d'insertion">
-              {operationStructuredTools.map((tool) => (
-                <button
-                  key={tool.id}
-                  type="button"
-                  className={`toolbar-shortcut toolbar-shortcut-symbol ${pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id ? "toolbar-shortcut-active" : ""}`}
-                  aria-label={tool.label}
-                  aria-pressed={pendingInsertTool?.kind === "structured" && pendingInsertTool.toolId === tool.id}
-                  draggable
-                  title={tool.hint}
-                  onDragStart={(event) => handleToolDragStart({ kind: "structured", toolId: tool.id }, event)}
-                  onDragEnd={handleToolDragEnd}
-                  onClick={() => {
-                    if (shouldIgnoreToolbarClick()) {
-                      return;
-                    }
-
-                    togglePendingInsertTool({ kind: "structured", toolId: tool.id });
-                  }}
-                >
-                  {renderStructuredToolGlyph(tool.id)}
                 </button>
               ))}
             </div>
