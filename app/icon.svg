@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Dysmaths">
+  <defs>
+    <linearGradient id="paper" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffefb" />
+      <stop offset="100%" stop-color="#f4f1e8" />
+    </linearGradient>
+  </defs>
+  <rect x="6" y="4" width="52" height="56" rx="12" fill="#dce5dd" />
+  <rect x="8" y="6" width="48" height="52" rx="11" fill="url(#paper)" stroke="#50606f" stroke-opacity="0.18" />
+  <rect x="18" y="10" width="3.5" height="44" rx="1.75" fill="#d56f3c" fill-opacity="0.5" />
+  <path d="M12 22.5H52" stroke="#a6c5df" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M12 31.5H52" stroke="#a6c5df" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M12 40.5H52" stroke="#a6c5df" stroke-width="2.2" stroke-linecap="round" />
+  <text x="27" y="42" font-family="'Trebuchet MS', 'Avenir Next', 'Segoe UI', sans-serif" font-size="26" font-weight="700" fill="#1f2d3d">x</text>
+  <text x="40" y="26" font-family="'Trebuchet MS', 'Avenir Next', 'Segoe UI', sans-serif" font-size="14" font-weight="700" fill="#d56f3c">2</text>
+</svg>
