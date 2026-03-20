@@ -2633,7 +2633,7 @@ input {
 
 .document-canvas-small-grid {
   background-color: var(--paper);
-  background-image: repeating-linear-gradient(180deg, transparent 0, transparent calc(4mm - 1px), rgba(187, 209, 235, 0.62) calc(4mm - 1px), rgba(187, 209, 235, 0.62) 4mm);
+  background-image: repeating-linear-gradient(180deg, transparent 0, transparent calc(5mm - 1px), rgba(187, 209, 235, 0.62) calc(5mm - 1px), rgba(187, 209, 235, 0.62) 5mm);
 }
 
 .document-canvas-small-grid::before {
@@ -2641,7 +2641,7 @@ input {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(90deg, rgba(187, 209, 235, 0.62) 0, rgba(187, 209, 235, 0.62) 1px, transparent 1px, transparent 4mm);
+  background: repeating-linear-gradient(90deg, rgba(187, 209, 235, 0.62) 0, rgba(187, 209, 235, 0.62) 1px, transparent 1px, transparent 5mm);
 }
 
 .document-canvas-lined {

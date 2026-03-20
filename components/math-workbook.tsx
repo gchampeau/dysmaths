@@ -458,6 +458,7 @@ const HIGHLIGHT_STROKE_WIDTH = 10;
 const MM_TO_PX = 96 / 25.4;
 const SEYES_MAJOR_MM = 8;
 const SEYES_MINOR_MM = 2;
+const SMALL_GRID_MM = 5;
 const SEYES_MARGIN_CM = 4;
 
 function mmToPx(mm: number) {
@@ -756,6 +757,7 @@ function getTextBoxWidth(text: string) {
 function getSheetMetrics(sheetStyle: SheetStyle, rem: number) {
   const seyesStep = mmToPx(SEYES_MAJOR_MM);
   const seyesMinorStep = mmToPx(SEYES_MINOR_MM);
+  const smallGridStep = mmToPx(SMALL_GRID_MM);
 
   switch (sheetStyle) {
     case "large-grid":
@@ -770,10 +772,10 @@ function getSheetMetrics(sheetStyle: SheetStyle, rem: number) {
       };
     case "small-grid":
       return {
-        snapXStep: seyesMinorStep * 2,
-        snapYStep: seyesMinorStep * 2,
-        originX: seyesMinorStep * 2,
-        originY: seyesMinorStep * 2,
+        snapXStep: smallGridStep,
+        snapYStep: smallGridStep,
+        originX: smallGridStep,
+        originY: smallGridStep,
         baselineOffset: CANVAS_LINE_BASELINE_OFFSET_PX,
         snapX: true,
         snapY: true
@@ -3836,6 +3838,8 @@ export function MathWorkbook() {
     const point = getPreciseCanvasPoint(clientX, clientY);
     let nextX = Math.max(18, Math.min(intrinsic.width - 18, Math.round(point.x)));
     let nextY = Math.max(18, Math.min(intrinsic.height - 18, Math.round(point.y)));
+    let guideX: number | null = null;
+    let guideY: number | null = null;
     const activeTool = activeGeometryToolRef.current;
     const measuredAngle = geometryAngleMeasurementRef.current;
     const shouldSnapToProtractor = isGeometryConstructionTool(activeTool) && Boolean(measuredAngle);
@@ -3853,14 +3857,34 @@ export function MathWorkbook() {
       }
     }
 
+    if (stateRef.current.sheetStyle === "small-grid") {
+      const metrics = getSheetMetrics(stateRef.current.sheetStyle, getRemPixels());
+      const snappedX = metrics.originX + Math.round((nextX - metrics.originX) / metrics.snapXStep) * metrics.snapXStep;
+      const snappedY = metrics.originY + Math.round((nextY - metrics.originY) / metrics.snapYStep) * metrics.snapYStep;
+      const horizontalThreshold = Math.min(MAX_SNAP_THRESHOLD_PX, metrics.snapXStep * 0.26);
+      const verticalThreshold = Math.min(MAX_SNAP_THRESHOLD_PX, metrics.snapYStep * 0.22);
+      const useSnapX = metrics.snapX && Math.abs(nextX - snappedX) <= horizontalThreshold;
+      const useSnapY = metrics.snapY && Math.abs(nextY - snappedY) <= verticalThreshold;
+
+      if (useSnapX) {
+        nextX = Math.max(18, Math.min(intrinsic.width - 18, Math.round(snappedX)));
+        guideX = nextX;
+      }
+
+      if (useSnapY) {
+        nextY = Math.max(18, Math.min(intrinsic.height - 18, Math.round(snappedY)));
+        guideY = nextY;
+      }
+    }
+
     return {
       x: nextX,
       y: nextY,
       xMm: pxToMm(nextX),
       yMm: pxToMm(nextY),
       guides: {
-        x: null,
-        y: null
+        x: guideX,
+        y: guideY
       }
     };
   }
@@ -7140,7 +7164,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       return overlay;
     }
 
-    const major = sheetStyle === "large-grid" ? mmToPx(8) : mmToPx(4);
+    const major = sheetStyle === "large-grid" ? mmToPx(8) : mmToPx(SMALL_GRID_MM);
     const color = sheetStyle === "large-grid" ? "rgba(187, 209, 235, 0.72)" : "rgba(187, 209, 235, 0.62)";
 
     for (let y = major; y < height; y += major) {
