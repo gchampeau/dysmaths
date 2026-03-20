@@ -209,11 +209,73 @@ button {
 }
 
 .sidebar-footer {
+  position: relative;
   flex: 0 0 auto;
   margin-top: 0.24rem;
   padding: 0.56rem 0.18rem 0 0.12rem;
   border-top: 1px solid color-mix(in srgb, var(--line) 88%, white);
   background: linear-gradient(180deg, rgba(255, 253, 249, 0) 0%, rgba(248, 246, 240, 0.78) 100%);
+}
+
+.sidebar-settings {
+  position: relative;
+  margin: 0 0.05rem 0.55rem;
+}
+
+.sidebar-settings-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.42rem 0.6rem;
+  border: 1px solid rgba(92, 108, 129, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 252, 247, 0.86);
+  color: color-mix(in srgb, var(--ink) 72%, var(--paper));
+  font-size: 0.76rem;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(36, 51, 66, 0.06);
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.sidebar-settings-button:hover,
+.sidebar-settings-button:focus-visible,
+.sidebar-settings-button-active {
+  border-color: color-mix(in srgb, var(--accent) 24%, white);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(36, 51, 66, 0.1);
+}
+
+.sidebar-settings-icon {
+  display: inline-flex;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.sidebar-settings-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.sidebar-settings-panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.55rem);
+  z-index: 20;
+  min-width: 13rem;
+  padding: 0.78rem;
+  border: 1px solid rgba(92, 108, 129, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 252, 247, 0.98);
+  box-shadow:
+    0 20px 38px rgba(36, 51, 66, 0.12),
+    0 8px 16px rgba(36, 51, 66, 0.06);
+}
+
+.sidebar-settings-field {
+  justify-items: stretch;
 }
 
 .sidebar-credit {

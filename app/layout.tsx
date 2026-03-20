@@ -3,9 +3,8 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dysmaths - l'écriture mathématique facile pour les dysgraphiques et dyspraxiques",
-  description:
-    "Une application pensée pour aider les collégiens et lycéens à rédiger, sauvegarder et imprimer leurs formules mathématiques."
+  title: "Dysmaths",
+  description: "Multilingual math writing workspace."
 };
 
 export default function RootLayout({
@@ -14,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="en">
       <body>
         {children}
         <Script

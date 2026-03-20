@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const sharedConfig: NextConfig = {
   devIndicators: false,
@@ -14,8 +17,8 @@ const sharedConfig: NextConfig = {
 };
 
 export default function nextConfig(phase: string): NextConfig {
-  return {
+  return withNextIntl({
     ...sharedConfig,
     distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next"
-  };
+  });
 }

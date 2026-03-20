@@ -15,13 +15,16 @@ import {
   useRef,
   useState
 } from "react";
+import {useLocale, useTranslations} from "next-intl";
 import { toBlob, toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
+import {localeLabels, type AppLocale} from "@/i18n/routing";
+import {usePathname, useRouter} from "@/i18n/navigation";
 
 type StudyMode = "college" | "lycee";
 type SheetStyle = "seyes" | "large-grid" | "small-grid" | "lined" | "blank";
 type StructuredTool = "fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root";
-type UtilityMenu = "highlight" | null;
+type UtilityMenu = "highlight" | "settings" | null;
 type GeometryTool = "point" | "segment" | "line" | "ray" | "circle" | "measure" | "protractor" | "compass";
 
 type FractionBlock = {
@@ -374,6 +377,46 @@ type FloatingTextShortcutLayout = {
   style: ReactCSSProperties;
 };
 
+type DefaultDocumentLabels = {
+  title: string;
+  fullName: string;
+  className: string;
+  date: string;
+};
+
+type WorkbookTranslator = (key: string, values?: Record<string, string | number>) => string;
+
+type ColorOption = {
+  id: "ink" | "orange" | "blue" | "green" | "pink";
+  label: string;
+  value: string;
+};
+
+type HighlightOption = {
+  id: "yellow" | "green" | "blue" | "pink";
+  label: string;
+  value: string;
+};
+
+type SheetStyleOption = {
+  id: SheetStyle;
+  label: string;
+};
+
+type GeometryToolOption = {
+  id: GeometryTool;
+  label: string;
+  hint: string;
+  glyph: string;
+};
+
+type StructuredToolOption = {
+  id: StructuredTool;
+  label: string;
+  hint: string;
+  modes: StudyMode[];
+};
+
 type GeometryPointCoordinate = {
   xMm: number;
   yMm: number;
@@ -494,8 +537,14 @@ function getDefaultNoteFontSize(sheetStyle: SheetStyle) {
 }
 
 const DEFAULT_TEXT_HTML = "";
+const DEFAULT_DOCUMENT_LABELS: DefaultDocumentLabels = {
+  title: "My math assignment",
+  fullName: "Full name:",
+  className: "Class:",
+  date: "Date:"
+};
 
-function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle): FloatingTextBox[] {
+function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle, labels: DefaultDocumentLabels = DEFAULT_DOCUMENT_LABELS): FloatingTextBox[] {
   const metrics = getSheetMetrics(sheetStyle, 16);
   const fontSize = getDefaultCanvasFontSize(sheetStyle);
   const fieldHeight = Math.max(24, fontSize * 22);
@@ -509,7 +558,7 @@ function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle): FloatingTextBox[]
       id: createId("text"),
       type: "textBox",
       variant: "default",
-      text: "Nom et prénom :",
+      text: labels.fullName,
       color: DEFAULT_ACTIVE_COLOR,
       fontSize,
       fontWeight: 500,
@@ -518,13 +567,13 @@ function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle): FloatingTextBox[]
       highlightColor: null,
       x: Math.round(startX),
       y: Math.round(firstBaseline - fieldHeight + 5),
-      width: getTextBoxWidth("Nom et prénom :")
+      width: getTextBoxWidth(labels.fullName)
     },
     {
       id: createId("text"),
       type: "textBox",
       variant: "default",
-      text: "Classe :",
+      text: labels.className,
       color: DEFAULT_ACTIVE_COLOR,
       fontSize,
       fontWeight: 500,
@@ -533,13 +582,13 @@ function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle): FloatingTextBox[]
       highlightColor: null,
       x: Math.round(startX),
       y: Math.round(secondBaseline - fieldHeight + 5),
-      width: getTextBoxWidth("Classe :")
+      width: getTextBoxWidth(labels.className)
     },
     {
       id: createId("text"),
       type: "textBox",
       variant: "default",
-      text: "Date :",
+      text: labels.date,
       color: DEFAULT_ACTIVE_COLOR,
       fontSize,
       fontWeight: 500,
@@ -548,15 +597,15 @@ function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle): FloatingTextBox[]
       highlightColor: null,
       x: Math.round(dateX),
       y: Math.round(secondBaseline - fieldHeight + 5),
-      width: getTextBoxWidth("Date :")
+      width: getTextBoxWidth(labels.date)
     }
   ];
 }
 
-function createDefaultState(sheetStyle: SheetStyle = "seyes"): WriterState {
+function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: DefaultDocumentLabels = DEFAULT_DOCUMENT_LABELS): WriterState {
   return {
     schemaVersion: WRITER_STATE_SCHEMA_VERSION,
-    title: "Mon devoir de maths",
+    title: labels.title,
     mode: "college",
     sheetStyle,
     activeColor: DEFAULT_ACTIVE_COLOR,
@@ -564,90 +613,92 @@ function createDefaultState(sheetStyle: SheetStyle = "seyes"): WriterState {
     textHtml: DEFAULT_TEXT_HTML,
     blocks: [],
     symbols: [],
-    textBoxes: createDefaultHeaderTextBoxes(sheetStyle),
+    textBoxes: createDefaultHeaderTextBoxes(sheetStyle, labels),
     strokes: [],
     geometry: []
   };
 }
 
-const COLOR_OPTIONS = [
-  { id: "ink", label: "Encre", value: "#1f2d3d" },
-  { id: "orange", label: "Orange", value: "#d56f3c" },
-  { id: "blue", label: "Bleu", value: "#2169b3" },
-  { id: "green", label: "Vert", value: "#2f8f57" },
-  { id: "pink", label: "Rose", value: "#b54d7a" }
+const COLOR_OPTION_VALUES = [
+  { id: "ink", value: "#1f2d3d" },
+  { id: "orange", value: "#d56f3c" },
+  { id: "blue", value: "#2169b3" },
+  { id: "green", value: "#2f8f57" },
+  { id: "pink", value: "#b54d7a" }
 ] as const;
 
-const HIGHLIGHT_OPTIONS = [
-  { id: "yellow", label: "Jaune", value: "rgb(255 226 92)" },
-  { id: "green", label: "Vert", value: "rgb(144 219 171)" },
-  { id: "blue", label: "Bleu", value: "rgb(160 208 255)" },
-  { id: "pink", label: "Rose", value: "rgb(255 184 210)" }
+const HIGHLIGHT_OPTION_VALUES = [
+  { id: "yellow", value: "rgb(255 226 92)" },
+  { id: "green", value: "rgb(144 219 171)" },
+  { id: "blue", value: "rgb(160 208 255)" },
+  { id: "pink", value: "rgb(255 184 210)" }
 ] as const;
 
-
-const SHEET_STYLE_OPTIONS = [
-  { id: "seyes" as const, label: "Lignes Seyes" },
-  { id: "large-grid" as const, label: "Grands carreaux" },
-  { id: "small-grid" as const, label: "Petits carreaux" },
-  { id: "lined" as const, label: "Feuille lignée" },
-  { id: "blank" as const, label: "Feuille blanche" }
+const SHEET_STYLE_OPTION_IDS = [
+  { id: "seyes", key: "seyes" },
+  { id: "large-grid", key: "largeGrid" },
+  { id: "small-grid", key: "smallGrid" },
+  { id: "lined", key: "lined" },
+  { id: "blank", key: "blank" }
 ] as const;
 
-const GEOMETRY_TOOL_OPTIONS = [
-  { id: "point" as const, label: "Point", hint: "Placer un point", glyph: "•" },
-  { id: "segment" as const, label: "Segment", hint: "Tracer un segment", glyph: "AB" },
-  { id: "line" as const, label: "Droite", hint: "Tracer une droite", glyph: "↔" },
-  { id: "ray" as const, label: "Demi-droite", hint: "Tracer une demi-droite", glyph: "→" },
-  { id: "circle" as const, label: "Cercle", hint: "Tracer un cercle", glyph: "◯" },
-  { id: "compass" as const, label: "Compas", hint: "Tracer un cercle avec ouverture mémorisée", glyph: "⌒" },
-  { id: "measure" as const, label: "Règle", hint: "Mesurer une distance", glyph: "cm" },
-  { id: "protractor" as const, label: "Rapporteur", hint: "Mesurer un angle", glyph: "protractor" }
+const GEOMETRY_TOOL_DEFINITIONS = [
+  { id: "point", key: "point", glyph: "•" },
+  { id: "segment", key: "segment", glyph: "AB" },
+  { id: "line", key: "line", glyph: "↔" },
+  { id: "ray", key: "ray", glyph: "→" },
+  { id: "circle", key: "circle", glyph: "◯" },
+  { id: "compass", key: "compass", glyph: "⌒" },
+  { id: "measure", key: "measure", glyph: "cm" },
+  { id: "protractor", key: "protractor", glyph: "protractor" }
 ] as const;
 
-const STRUCTURED_TOOLS = [
-  { id: "fraction" as const, label: "Fraction posée", hint: "Fraction posée", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "addition" as const, label: "Addition posée", hint: "Addition posée", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "subtraction" as const, label: "Soustraction posée", hint: "Soustraction posée", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "multiplication" as const, label: "Multiplication posée", hint: "Multiplication posée", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "division" as const, label: "Division posée", hint: "Division posée", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "power" as const, label: "Puissance", hint: "Puissance", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "root" as const, label: "Racine", hint: "Radicande et résultat", modes: ["college", "lycee"] as StudyMode[] }
+const STRUCTURED_TOOL_DEFINITIONS = [
+  { id: "fraction", key: "fraction", modes: ["college", "lycee"] as StudyMode[] },
+  { id: "addition", key: "addition", modes: ["college", "lycee"] as StudyMode[] },
+  { id: "subtraction", key: "subtraction", modes: ["college", "lycee"] as StudyMode[] },
+  { id: "multiplication", key: "multiplication", modes: ["college", "lycee"] as StudyMode[] },
+  { id: "division", key: "division", modes: ["college", "lycee"] as StudyMode[] },
+  { id: "power", key: "power", modes: ["college", "lycee"] as StudyMode[] },
+  { id: "root", key: "root", modes: ["college", "lycee"] as StudyMode[] }
 ] as const;
 
-const INLINE_SHORTCUT_GROUPS: InlineShortcutGroup[] = [
+const INLINE_SHORTCUT_DEFINITIONS: Array<{
+  nameKey: "essentials" | "geometry" | "lycee";
+  items: Array<InlineShortcutItem & {hintKey: keyof ReturnType<typeof createWorkbookUi>["shortcutHints"]}>;
+}> = [
   {
-    name: "Essentiels",
+    nameKey: "essentials",
     items: [
-      { id: "equal", label: "=", hint: "Ajoute =", content: " = ", modes: ["college", "lycee"] },
-      { id: "neq", label: "≠", hint: "Ajoute ≠", content: " ≠ ", modes: ["college", "lycee"] },
-      { id: "lt", label: "<", hint: "Inférieur à", content: " < ", modes: ["college", "lycee"] },
-      { id: "gt", label: ">", hint: "Supérieur à", content: " > ", modes: ["college", "lycee"] },
-      { id: "leq", label: "≤", hint: "Inférieur ou égal", content: " ≤ ", modes: ["college", "lycee"] },
-      { id: "geq", label: "≥", hint: "Supérieur ou égal", content: " ≥ ", modes: ["college", "lycee"] },
-      { id: "minus", label: "-", hint: "Soustraire", content: " - ", modes: ["college", "lycee"] },
-      { id: "times", label: "×", hint: "Multiplier", content: " × ", modes: ["college", "lycee"] },
-      { id: "div", label: "÷", hint: "Diviser", content: " ÷ ", modes: ["college", "lycee"] },
-      { id: "lbracket", label: "[", hint: "Crochet ouvrant", content: "[", modes: ["college", "lycee"] },
-      { id: "rbracket", label: "]", hint: "Crochet fermant", content: "]", modes: ["college", "lycee"] },
-      { id: "percent", label: "%", hint: "Pourcentage", content: "%", modes: ["college", "lycee"] },
-      { id: "pi", label: "π", hint: "Pi", content: "π", modes: ["college", "lycee"] }
+      { id: "equal", label: "=", hintKey: "equal", hint: "", content: " = ", modes: ["college", "lycee"] },
+      { id: "neq", label: "≠", hintKey: "neq", hint: "", content: " ≠ ", modes: ["college", "lycee"] },
+      { id: "lt", label: "<", hintKey: "lt", hint: "", content: " < ", modes: ["college", "lycee"] },
+      { id: "gt", label: ">", hintKey: "gt", hint: "", content: " > ", modes: ["college", "lycee"] },
+      { id: "leq", label: "≤", hintKey: "leq", hint: "", content: " ≤ ", modes: ["college", "lycee"] },
+      { id: "geq", label: "≥", hintKey: "geq", hint: "", content: " ≥ ", modes: ["college", "lycee"] },
+      { id: "minus", label: "-", hintKey: "minus", hint: "", content: " - ", modes: ["college", "lycee"] },
+      { id: "times", label: "×", hintKey: "times", hint: "", content: " × ", modes: ["college", "lycee"] },
+      { id: "div", label: "÷", hintKey: "div", hint: "", content: " ÷ ", modes: ["college", "lycee"] },
+      { id: "lbracket", label: "[", hintKey: "lbracket", hint: "", content: "[", modes: ["college", "lycee"] },
+      { id: "rbracket", label: "]", hintKey: "rbracket", hint: "", content: "]", modes: ["college", "lycee"] },
+      { id: "percent", label: "%", hintKey: "percent", hint: "", content: "%", modes: ["college", "lycee"] },
+      { id: "pi", label: "π", hintKey: "pi", hint: "", content: "π", modes: ["college", "lycee"] }
     ]
   },
   {
-    name: "Géométrie",
+    nameKey: "geometry",
     items: [
-      { id: "angle", label: "∠ABC", hint: "Angle", content: "∠ABC", modes: ["college", "lycee"] },
-      { id: "parallel", label: "∥", hint: "Parallèle", content: " ∥ ", modes: ["college", "lycee"] },
-      { id: "perpendicular", label: "⟂", hint: "Perpendiculaire", content: " ⟂ ", modes: ["college", "lycee"] },
-      { id: "degree", label: "°", hint: "Degré", content: "°", modes: ["college", "lycee"] }
+      { id: "angle", label: "∠ABC", hintKey: "angle", hint: "", content: "∠ABC", modes: ["college", "lycee"] },
+      { id: "parallel", label: "∥", hintKey: "parallel", hint: "", content: " ∥ ", modes: ["college", "lycee"] },
+      { id: "perpendicular", label: "⟂", hintKey: "perpendicular", hint: "", content: " ⟂ ", modes: ["college", "lycee"] },
+      { id: "degree", label: "°", hintKey: "degree", hint: "", content: "°", modes: ["college", "lycee"] }
     ]
   },
   {
-    name: "Lycée",
+    nameKey: "lycee",
     items: [
-      { id: "sum", label: "Σ", hint: "Somme", content: "Σ(k=1→n)", modes: ["lycee"] },
-      { id: "integral", label: "∫", hint: "Intégrale", content: "∫[a;b]", modes: ["lycee"] },
+      { id: "sum", label: "Σ", hintKey: "sum", hint: "", content: "Σ(k=1→n)", modes: ["lycee"] },
+      { id: "integral", label: "∫", hintKey: "integral", hint: "", content: "∫[a;b]", modes: ["lycee"] }
     ]
   }
 ];
@@ -671,6 +722,87 @@ function renderShortcutGlyph(shortcut: Pick<InlineShortcutItem, "id" | "label">)
       {shortcut.label}
     </span>
   );
+}
+
+function createWorkbookUi(t: WorkbookTranslator) {
+  const colorOptions: ColorOption[] = COLOR_OPTION_VALUES.map((option) => ({
+    ...option,
+    label: t(`colors.${option.id}`)
+  }));
+  const highlightOptions: HighlightOption[] = HIGHLIGHT_OPTION_VALUES.map((option) => ({
+    ...option,
+    label: t(`highlights.${option.id}`)
+  }));
+  const sheetStyleOptions: SheetStyleOption[] = SHEET_STYLE_OPTION_IDS.map((option) => ({
+    id: option.id,
+    label: t(`sheetStyles.${option.key}`)
+  }));
+  const geometryTools: GeometryToolOption[] = GEOMETRY_TOOL_DEFINITIONS.map((tool) => ({
+    id: tool.id,
+    glyph: tool.glyph,
+    label: t(`geometryTools.${tool.key}.label`),
+    hint: t(`geometryTools.${tool.key}.hint`)
+  }));
+  const structuredTools: StructuredToolOption[] = STRUCTURED_TOOL_DEFINITIONS.map((tool) => ({
+    id: tool.id,
+    modes: tool.modes,
+    label: t(`structuredTools.${tool.key}.label`),
+    hint: t(`structuredTools.${tool.key}.hint`)
+  }));
+  const shortcutHints = {
+    equal: t("shortcuts.equal"),
+    neq: t("shortcuts.neq"),
+    lt: t("shortcuts.lt"),
+    gt: t("shortcuts.gt"),
+    leq: t("shortcuts.leq"),
+    geq: t("shortcuts.geq"),
+    minus: t("shortcuts.minus"),
+    times: t("shortcuts.times"),
+    div: t("shortcuts.div"),
+    lbracket: t("shortcuts.lbracket"),
+    rbracket: t("shortcuts.rbracket"),
+    percent: t("shortcuts.percent"),
+    pi: t("shortcuts.pi"),
+    angle: t("shortcuts.angle"),
+    parallel: t("shortcuts.parallel"),
+    perpendicular: t("shortcuts.perpendicular"),
+    degree: t("shortcuts.degree"),
+    sum: t("shortcuts.sum"),
+    integral: t("shortcuts.integral")
+  } as const;
+  const inlineShortcutGroups: InlineShortcutGroup[] = INLINE_SHORTCUT_DEFINITIONS.map((group) => ({
+    name: t(`shortcutGroups.${group.nameKey}`),
+    items: group.items.map((item) => ({
+      ...item,
+      hint: shortcutHints[item.hintKey]
+    }))
+  }));
+
+  return {
+    defaultDocumentLabels: {
+      title: t("document.defaultTitle"),
+      fullName: t("document.defaultFullName"),
+      className: t("document.defaultClass"),
+      date: t("document.defaultDate")
+    } satisfies DefaultDocumentLabels,
+    colorOptions,
+    highlightOptions,
+    sheetStyleOptions,
+    geometryTools,
+    structuredTools,
+    inlineShortcutGroups,
+    shortcutHints,
+    blockTitles: {
+      fraction: t("blockTitles.fraction"),
+      addition: t("blockTitles.addition"),
+      subtraction: t("blockTitles.subtraction"),
+      multiplication: t("blockTitles.multiplication"),
+      division: t("blockTitles.division"),
+      power: t("blockTitles.power"),
+      root: t("blockTitles.root"),
+      default: t("blockTitles.default")
+    }
+  };
 }
 
 function renderStructuredToolGlyph(toolId: StructuredTool) {
@@ -701,7 +833,7 @@ function renderStructuredToolGlyph(toolId: StructuredTool) {
   return "√";
 }
 
-function renderGeometryToolGlyph(tool: (typeof GEOMETRY_TOOL_OPTIONS)[number]) {
+function renderGeometryToolGlyph(tool: Pick<GeometryToolOption, "id" | "glyph">) {
   if (tool.id !== "protractor") {
     return tool.glyph;
   }
@@ -1591,24 +1723,24 @@ function parseStoredState(raw: string): WriterState | null {
   }
 }
 
-function getBlockTitle(block: MathBlock) {
+function getBlockTitle(block: MathBlock, blockTitles: ReturnType<typeof createWorkbookUi>["blockTitles"]) {
   switch (block.type) {
     case "fraction":
-      return "Fraction posée";
+      return blockTitles.fraction;
     case "addition":
-      return "Addition posée";
+      return blockTitles.addition;
     case "subtraction":
-      return "Soustraction posée";
+      return blockTitles.subtraction;
     case "multiplication":
-      return "Multiplication posée";
+      return blockTitles.multiplication;
     case "division":
-      return "Division posée";
+      return blockTitles.division;
     case "power":
-      return "Puissance";
+      return blockTitles.power;
     case "root":
-      return "Racine";
+      return blockTitles.root;
     default:
-      return "Bloc";
+      return blockTitles.default;
   }
 }
 
@@ -2325,7 +2457,12 @@ function isBlockEmpty(block: MathBlock) {
 }
 
 export function MathWorkbook() {
-  const [state, setState] = useState<WriterState>(() => createDefaultState());
+  const t = useTranslations("Workbook");
+  const locale = useLocale() as AppLocale;
+  const router = useRouter();
+  const pathname = usePathname();
+  const workbookUi = useMemo(() => createWorkbookUi(t), [t]);
+  const [state, setState] = useState<WriterState>(() => createDefaultState("seyes", workbookUi.defaultDocumentLabels));
   const [historyPast, setHistoryPast] = useState<WriterState[]>([]);
   const [historyFuture, setHistoryFuture] = useState<WriterState[]>([]);
   const [openMenu, setOpenMenu] = useState<UtilityMenu>(null);
@@ -2407,15 +2544,14 @@ export function MathWorkbook() {
   const [activeResultCell, setActiveResultCell] = useState<{ blockId: string; cellIndex: number } | null>(null);
   const historyInitializedRef = useRef(false);
   const skipHistoryRef = useRef(false);
-  const previousStateRef = useRef<WriterState>(cloneWriterState(createDefaultState()));
-  const stateRef = useRef<WriterState>(cloneWriterState(createDefaultState()));
+  const previousStateRef = useRef<WriterState>(cloneWriterState(createDefaultState("seyes", workbookUi.defaultDocumentLabels)));
+  const stateRef = useRef<WriterState>(cloneWriterState(createDefaultState("seyes", workbookUi.defaultDocumentLabels)));
   const transientHistorySnapshotRef = useRef<WriterState | null>(null);
   const transientHistoryKindRef = useRef<"drag" | "edit" | null>(null);
   const suspendHistoryRef = useRef(false);
 
-  const activeInlineShortcuts = useMemo(() => INLINE_SHORTCUT_GROUPS, []);
-
-  const activeStructuredTools = useMemo(() => STRUCTURED_TOOLS, []);
+  const activeInlineShortcuts = useMemo(() => workbookUi.inlineShortcutGroups, [workbookUi]);
+  const activeStructuredTools = useMemo(() => workbookUi.structuredTools, [workbookUi]);
   const rootStructuredTool = useMemo(() => activeStructuredTools.find((tool) => tool.id === "root") ?? null, [activeStructuredTools]);
   const operationStructuredTools = useMemo(() => activeStructuredTools.filter((tool) => tool.id !== "root"), [activeStructuredTools]);
   const textBoxShortcuts = useMemo(
@@ -2478,53 +2614,51 @@ export function MathWorkbook() {
   );
   const geometryPanelHelper = useMemo(() => {
     if (!activeGeometryTool) {
-      return "Trace des figures précises en gardant l’échelle de la feuille pour l’impression.";
+      return t("geometryHelper.idle");
     }
 
     if (activeGeometryTool === "protractor") {
       if (!geometryProtractorDraft) {
-        return "Clique un point sur le premier côté de l’angle.";
+        return t("geometryHelper.protractorFirstSide");
       }
 
       if (!geometryProtractorDraft.vertex) {
-        return "Clique ensuite le sommet de l’angle.";
+        return t("geometryHelper.protractorVertex");
       }
 
-      return "Clique un point sur le second côté pour figer la mesure.";
+      return t("geometryHelper.protractorSecondSide");
     }
 
     if (activeGeometryTool === "compass") {
       if (!geometryCompassDraft) {
-        return "Clique le centre du cercle.";
+        return t("geometryHelper.compassCenter");
       }
 
       if (geometryCompassDraft.phase === "radius") {
-        return "Déplace la souris pour régler l’ouverture, puis clique pour commencer l’arc.";
+        return t("geometryHelper.compassRadius");
       }
 
-      return "Déplace la souris pour agrandir ou réduire l’arc, puis clique pour le terminer.";
+      return t("geometryHelper.compassArc");
     }
 
     if (geometryDraft) {
       if (activeGeometryTool === "measure") {
-        return "Clique un second point pour figer la mesure.";
+        return t("geometryHelper.measureSecondPoint");
       }
 
-      return activeGeometryTool === "circle"
-        ? "Clique une seconde fois pour fixer le rayon du cercle."
-        : "Clique une seconde fois pour terminer la figure.";
+      return t("geometryHelper.finishShape");
     }
 
     if (activeGeometryTool === "measure") {
-      return "Clique deux points pour mesurer une distance sans créer d’objet.";
+      return t("geometryHelper.measureTwoPoints");
     }
 
     return activeGeometryTool === "point"
-      ? "Clique la feuille pour placer un point."
+      ? t("geometryHelper.placePoint")
       : activeGeometryTool === "circle"
-        ? "Clique la feuille pour placer le centre du cercle."
-        : "Clique la feuille pour placer le premier point.";
-  }, [activeGeometryTool, geometryCompassDraft, geometryDraft, geometryProtractorDraft]);
+        ? t("geometryHelper.placeCircleCenter")
+        : t("geometryHelper.placeFirstPoint");
+  }, [activeGeometryTool, geometryCompassDraft, geometryDraft, geometryProtractorDraft, t]);
   const geometryDraftIndicator = useMemo<GeometryDraftIndicator | null>(() => {
     if (activeGeometryTool === "protractor" && geometryProtractorDraft?.vertex) {
       const currentX = mmToPx(geometryProtractorDraft.current.xMm);
@@ -2754,15 +2888,15 @@ export function MathWorkbook() {
     }
 
     if (pendingInsertTool.kind === "text") {
-      return "Texte";
+      return t("canvas.emptyTextBox");
     }
 
     if (pendingInsertTool.kind === "structured") {
-      return STRUCTURED_TOOLS.find((tool) => tool.id === pendingInsertTool.toolId)?.label ?? "Bloc";
+      return activeStructuredTools.find((tool) => tool.id === pendingInsertTool.toolId)?.label ?? workbookUi.blockTitles.default;
     }
 
-    return findShortcutById(pendingInsertTool.shortcutId)?.hint ?? findShortcutById(pendingInsertTool.shortcutId)?.label ?? "Symbole";
-  }, [pendingInsertTool, activeInlineShortcuts]);
+    return findShortcutById(pendingInsertTool.shortcutId)?.hint ?? findShortcutById(pendingInsertTool.shortcutId)?.label ?? workbookUi.blockTitles.default;
+  }, [pendingInsertTool, activeInlineShortcuts, activeStructuredTools, t, workbookUi.blockTitles.default]);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -6482,9 +6616,9 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           }}
           onClick={() => toggleInlineBlockStrikeMode(blockId)}
         >
-          Barrer
+          {t("inlineEditor.strike")}
         </button>
-        {strikeModeBlockId === blockId ? <span className="operation-edit-menu-hint">Clique une case</span> : null}
+        {strikeModeBlockId === blockId ? <span className="operation-edit-menu-hint">{t("inlineEditor.clickCell")}</span> : null}
       </div>
     );
     const wrapInlineOperationEditor = (blockId: string, content: ReactNode) => (
@@ -7243,7 +7377,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
   function confirmResetDocument() {
     window.localStorage.removeItem(STORAGE_KEY);
-    setState(createDefaultState());
+    setState(createDefaultState("seyes", workbookUi.defaultDocumentLabels));
     setOpenMenu(null);
     setCanvasQuickMenu(null);
     setModalState(null);
@@ -7253,6 +7387,14 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     if (editorRef.current) {
       editorRef.current.innerHTML = DEFAULT_TEXT_HTML;
     }
+  }
+
+  function handleLocaleChange(nextLocale: string) {
+    if (nextLocale === locale || !pathname) {
+      return;
+    }
+
+    router.replace(pathname, {locale: nextLocale as AppLocale});
   }
 
   function createExportSheetOverlay(sheetStyle: SheetStyle, width: number, height: number) {
@@ -7513,16 +7655,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       return (
         <div className="math-editor-grid">
           <label>
-            <span>Numérateur</span>
+            <span>{t("modalFields.numerator")}</span>
             <input value={block.numerator} onChange={(event) => updateModalField("numerator", event.target.value)} placeholder="3x + 2" />
           </label>
           <label>
-            <span>Dénominateur</span>
+            <span>{t("modalFields.denominator")}</span>
             <input value={block.denominator} onChange={(event) => updateModalField("denominator", event.target.value)} placeholder="5" />
           </label>
           <label>
-            <span>Consigne ou remarque</span>
-            <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder="Je simplifie la fraction" />
+            <span>{t("modalFields.note")}</span>
+            <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder={t("modalFields.fractionNotePlaceholder")} />
           </label>
         </div>
       );
@@ -7532,20 +7674,20 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       return (
         <div className="math-editor-grid">
           <label>
-            <span>Diviseur</span>
+            <span>{t("modalFields.divisor")}</span>
             <input value={block.divisor} onChange={(event) => updateModalField("divisor", event.target.value)} placeholder="7" />
           </label>
           <label>
-            <span>Quotient</span>
+            <span>{t("modalFields.quotient")}</span>
             <input value={block.quotient} onChange={(event) => updateModalField("quotient", event.target.value)} placeholder="35" />
           </label>
           <label className="wide-field">
-            <span>Dividende et calculs</span>
+            <span>{t("modalFields.dividendAndWork")}</span>
             <textarea value={block.work} onChange={(event) => updateModalField("work", event.target.value)} placeholder={"245\n21\n35\n0"} rows={4} />
           </label>
           <label className="wide-field">
-            <span>Consigne ou remarque</span>
-            <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder="Je vérifie avec 35 × 7" />
+            <span>{t("modalFields.note")}</span>
+            <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder={t("modalFields.divisionNotePlaceholder")} />
           </label>
         </div>
       );
@@ -7555,32 +7697,36 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       return (
         <div className="math-editor-grid">
           <label>
-            <span>Premier terme</span>
+            <span>{t("modalFields.firstTerm")}</span>
             <input value={block.top} onChange={(event) => updateModalField("top", event.target.value)} placeholder="245" />
           </label>
           <label>
-            <span>Deuxième terme</span>
+            <span>{t("modalFields.secondTerm")}</span>
             <input value={block.bottom} onChange={(event) => updateModalField("bottom", event.target.value)} placeholder="37" />
           </label>
           <label>
-            <span>Résultat</span>
+            <span>{t("modalFields.result")}</span>
             <input value={block.result} onChange={(event) => updateModalField("result", event.target.value)} placeholder="282" />
           </label>
           <label>
-            <span>Retenue haut</span>
+            <span>{t("modalFields.carryTop")}</span>
             <input value={block.carryTop.join("")} onChange={(event) => updateModalField("carryTop", normalizeArithmeticCarryCells(event.target.value))} placeholder="1" />
           </label>
           <label>
-            <span>Retenue milieu</span>
+            <span>{t("modalFields.carryMiddle")}</span>
             <input value={block.carryBottom.join("")} onChange={(event) => updateModalField("carryBottom", normalizeArithmeticCarryCells(event.target.value))} placeholder="2" />
           </label>
           <label>
-            <span>Retenue bas</span>
+            <span>{t("modalFields.carryBottom")}</span>
             <input value={block.carryResult.join("")} onChange={(event) => updateModalField("carryResult", normalizeArithmeticCarryCells(event.target.value))} placeholder="3" />
           </label>
           <label className="wide-field">
-            <span>Consigne ou remarque</span>
-            <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder={block.type === "addition" ? "Je pose l'addition" : block.type === "subtraction" ? "Je pose la soustraction" : "Je pose la multiplication"} />
+            <span>{t("modalFields.note")}</span>
+            <input
+              value={block.caption}
+              onChange={(event) => updateModalField("caption", event.target.value)}
+              placeholder={block.type === "addition" ? t("modalFields.additionNotePlaceholder") : block.type === "subtraction" ? t("modalFields.subtractionNotePlaceholder") : t("modalFields.multiplicationNotePlaceholder")}
+            />
           </label>
         </div>
       );
@@ -7590,16 +7736,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       return (
         <div className="math-editor-grid">
           <label>
-            <span>Base</span>
+            <span>{t("modalFields.base")}</span>
             <input value={block.base} onChange={(event) => updateModalField("base", event.target.value)} placeholder="2" />
           </label>
           <label>
-            <span>Exposant</span>
+            <span>{t("modalFields.exponent")}</span>
             <input value={block.exponent} onChange={(event) => updateModalField("exponent", event.target.value)} placeholder="3" />
           </label>
           <label>
-            <span>Consigne ou remarque</span>
-            <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder="Carré, cube, puissance n" />
+            <span>{t("modalFields.note")}</span>
+            <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder={t("modalFields.powerNotePlaceholder")} />
           </label>
         </div>
       );
@@ -7608,12 +7754,12 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     return (
       <div className="math-editor-grid">
         <label>
-          <span>Radicande</span>
+          <span>{t("modalFields.radicand")}</span>
           <input value={block.radicand} onChange={(event) => updateModalField("radicand", event.target.value)} placeholder="49" />
         </label>
         <label className="wide-field">
-          <span>Consigne ou remarque</span>
-          <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder="Racine carrée" />
+          <span>{t("modalFields.note")}</span>
+          <input value={block.caption} onChange={(event) => updateModalField("caption", event.target.value)} placeholder={t("modalFields.rootNotePlaceholder")} />
         </label>
       </div>
     );
@@ -7771,14 +7917,14 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
   return (
     <main className="editor-shell">
-      {isToolsPanelOpen ? <button type="button" className="tools-drawer-backdrop" aria-label="Fermer les outils" onClick={() => setIsToolsPanelOpen(false)} /> : null}
+      {isToolsPanelOpen ? <button type="button" className="tools-drawer-backdrop" aria-label={t("toolbar.closeTools")} onClick={() => setIsToolsPanelOpen(false)} /> : null}
 
       <header className={`top-toolbar ${isToolsPanelOpen ? "top-toolbar-open" : ""}`}>
         <div className="top-toolbar-inner">
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">Géométrie</p>
-            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Outils de géométrie">
-              {GEOMETRY_TOOL_OPTIONS.map((tool) => (
+            <p className="sidebar-block-label">{t("toolbar.geometry")}</p>
+            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label={t("toolbar.geometryGroup")}>
+              {workbookUi.geometryTools.map((tool) => (
                 <button
                   key={tool.id}
                   type="button"
@@ -7796,8 +7942,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">Opérations posées</p>
-            <div className="toolbar-shortcut-group" aria-label="Outils d'insertion">
+            <p className="sidebar-block-label">{t("toolbar.structuredOperations")}</p>
+            <div className="toolbar-shortcut-group" aria-label={t("toolbar.insertionTools")}>
               {operationStructuredTools.map((tool) => (
                 <button
                   key={tool.id}
@@ -7824,8 +7970,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">Symboles courants</p>
-            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Raccourcis symboles courants">
+            <p className="sidebar-block-label">{t("toolbar.commonSymbols")}</p>
+            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label={t("toolbar.commonSymbolShortcuts")}>
               {rootStructuredTool ? (
                 <button
                   type="button"
@@ -7872,8 +8018,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">Outils lycée</p>
-            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label="Raccourcis lycée">
+            <p className="sidebar-block-label">{t("toolbar.lyceeTools")}</p>
+            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label={t("toolbar.lyceeShortcuts")}>
               {visibleLyceeInlineShortcuts.map((shortcut) => (
                 <button
                   key={shortcut.id}
@@ -7898,10 +8044,10 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
             </div>
           </div>
 
-          <div className="toolbar-row toolbar-row-format sidebar-block sidebar-block-compact" aria-label="Mise en forme">
-            <p className="sidebar-block-label">Mise en forme</p>
+          <div className="toolbar-row toolbar-row-format sidebar-block sidebar-block-compact" aria-label={t("toolbar.formatting")}>
+            <p className="sidebar-block-label">{t("toolbar.formatting")}</p>
             <div className="editor-local-toolbar-group">
-              {COLOR_OPTIONS.map((option) => (
+              {workbookUi.colorOptions.map((option) => (
                 <button
                   key={option.id}
                   type="button"
@@ -7916,27 +8062,27 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
             </div>
 
             <div className="editor-local-toolbar-group">
-              <button type="button" className="chip-button chip-button-compact" aria-label="Gras" title="Gras" onMouseDown={(event) => event.preventDefault()} onClick={toggleCanvasBold}>
+              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onMouseDown={(event) => event.preventDefault()} onClick={toggleCanvasBold}>
                 B
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label="Italique" title="Italique" onMouseDown={(event) => event.preventDefault()} onClick={toggleCanvasItalic}>
+              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onMouseDown={(event) => event.preventDefault()} onClick={toggleCanvasItalic}>
                 I
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label="Souligné" title="Souligné" onMouseDown={(event) => event.preventDefault()} onClick={toggleCanvasUnderline}>
+              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onMouseDown={(event) => event.preventDefault()} onClick={toggleCanvasUnderline}>
                 <span style={{ textDecoration: "underline" }}>U</span>
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label="Réduire" title="Réduire" onMouseDown={(event) => event.preventDefault()} onClick={() => adjustCanvasSize("down")}>
+              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onMouseDown={(event) => event.preventDefault()} onClick={() => adjustCanvasSize("down")}>
                 A-
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label="Agrandir" title="Agrandir" onMouseDown={(event) => event.preventDefault()} onClick={() => adjustCanvasSize("up")}>
+              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onMouseDown={(event) => event.preventDefault()} onClick={() => adjustCanvasSize("up")}>
                 A+
               </button>
               <div className="toolbar-highlight-shell">
                 <button
                   type="button"
                   className={`chip-button toolbar-highlight-button ${openMenu === "highlight" || advancedTool === "highlight" ? "toolbar-highlight-button-active" : ""}`}
-                  aria-label="Stabilo"
-                  title="Stabilo"
+                  aria-label={t("toolbar.highlighter")}
+                  title={t("toolbar.highlighter")}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => toggleMenu("highlight")}
                 >
@@ -7949,8 +8095,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 </button>
 
                 {openMenu === "highlight" ? (
-                  <div className="toolbar-highlight-panel" role="menu" aria-label="Choisir une couleur de stabilo">
-                    {HIGHLIGHT_OPTIONS.map((option) => (
+                  <div className="toolbar-highlight-panel" role="menu" aria-label={t("toolbar.chooseHighlighter")}>
+                    {workbookUi.highlightOptions.map((option) => (
                       <button
                         key={option.id}
                         type="button"
@@ -7970,8 +8116,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               <button
                 type="button"
                 className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "draw" ? "toolbar-shortcut-active" : ""}`}
-                title="Dessin libre"
-                aria-label="Dessin libre"
+                title={t("toolbar.freehand")}
+                aria-label={t("toolbar.freehand")}
                 aria-pressed={advancedTool === "draw"}
                 onClick={() => toggleAdvancedToolMode("draw")}
               >
@@ -7979,12 +8125,12 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               </button>
             </div>
 
-            <div className="editor-local-toolbar-group toolbar-advanced-group" aria-label="Outils avancés">
+            <div className="editor-local-toolbar-group toolbar-advanced-group" aria-label={t("toolbar.advancedTools")}>
               <button
                 type="button"
                 className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "select" ? "sheet-tool-button-active" : ""}`}
-                title="Sélection"
-                aria-label="Sélection"
+                title={t("toolbar.selection")}
+                aria-label={t("toolbar.selection")}
                 aria-pressed={advancedTool === "select"}
                 onClick={() => toggleAdvancedToolMode("select")}
               >
@@ -7994,7 +8140,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 <button
                   type="button"
                   className="toolbar-shortcut toolbar-shortcut-symbol"
-                  title="Supprimer"
+                  title={t("toolbar.delete")}
                   onClick={handleHeaderDelete}
                 >
                   ×
@@ -8005,8 +8151,50 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         </div>
 
         <footer className="sidebar-footer">
+          <div className="sidebar-settings">
+            <button
+              type="button"
+              className={`sidebar-settings-button ${openMenu === "settings" ? "sidebar-settings-button-active" : ""}`}
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "settings"}
+              aria-label={t("toolbar.settings")}
+              title={t("toolbar.settings")}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => toggleMenu("settings")}
+            >
+              <span className="sidebar-settings-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Zm9 4.8-.02-2-2.18-.5a7.2 7.2 0 0 0-.72-1.72l1.18-1.9-1.42-1.42-1.9 1.18a7.2 7.2 0 0 0-1.72-.72L13 3h-2l-.5 2.18a7.2 7.2 0 0 0-1.72.72l-1.9-1.18-1.42 1.42 1.18 1.9a7.2 7.2 0 0 0-.72 1.72L3 11v2l2.18.5c.15.6.39 1.18.72 1.72l-1.18 1.9 1.42 1.42 1.9-1.18c.54.33 1.12.57 1.72.72L11 21h2l.5-2.18c.6-.15 1.18-.39 1.72-.72l1.9 1.18 1.42-1.42-1.18-1.9c.33-.54.57-1.12.72-1.72L21 13Z" />
+                </svg>
+              </span>
+              <span>{t("toolbar.settings")}</span>
+            </button>
+
+            {openMenu === "settings" ? (
+              <div className="sidebar-settings-panel" role="menu" aria-label={t("toolbar.settings")}>
+                <label className="sheet-style-picker sidebar-settings-field">
+                  <span>{t("toolbar.language")}</span>
+                  <select
+                    className="sheet-style-select"
+                    value={locale}
+                    onChange={(event) => {
+                      handleLocaleChange(event.target.value);
+                      setOpenMenu(null);
+                    }}
+                    aria-label={t("toolbar.language")}
+                  >
+                    {Object.entries(localeLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : null}
+          </div>
           <p className="sidebar-credit">
-            Conçu par{" "}
+            {t("toolbar.creditPrefix")}{" "}
             <a href="https://www.champeau.info" target="_blank" rel="noreferrer">
               Guillaume Champeau
             </a>
@@ -8019,33 +8207,33 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         <div className="sheet-action-bar">
           <div className="sheet-action-group">
             <button type="button" className="toolbar-action ghost tablet-tools-toggle" onClick={() => setIsToolsPanelOpen(true)}>
-              Outils
+              {t("toolbar.tools")}
             </button>
             <button type="button" className="toolbar-action ghost" onClick={undoHistory} disabled={historyPast.length === 0}>
-              Annuler
+              {t("toolbar.undo")}
             </button>
             <button type="button" className="toolbar-action ghost" onClick={redoHistory} disabled={historyFuture.length === 0}>
-              Refaire
+              {t("toolbar.redo")}
             </button>
           </div>
           <div className="sheet-action-group">
             <button type="button" className="toolbar-action primary" onClick={exportPdf} disabled={isExporting !== null}>
-              {isExporting === "pdf" ? "Création PDF..." : "PDF"}
+              {isExporting === "pdf" ? t("toolbar.exportPdfLoading") : "PDF"}
             </button>
             <button type="button" className="toolbar-action secondary" onClick={exportPng} disabled={isExporting !== null}>
-              {isExporting === "png" ? "Création PNG..." : "PNG"}
+              {isExporting === "png" ? t("toolbar.exportPngLoading") : "PNG"}
             </button>
             <button type="button" className="toolbar-action ghost" onClick={printSheet} disabled={isExporting !== null}>
-              {isExporting === "print" ? "Préparation..." : "Imprimer"}
+              {isExporting === "print" ? t("toolbar.preparingPrint") : t("toolbar.print")}
             </button>
             <label className="sheet-style-picker sheet-style-picker-toolbar">
               <select
                 className="sheet-style-select"
                 value={state.sheetStyle}
                 onChange={(event) => setState((current) => ({ ...current, sheetStyle: event.target.value as SheetStyle }))}
-                aria-label="Style de feuille"
+                aria-label={t("toolbar.sheetStyle")}
               >
-                {SHEET_STYLE_OPTIONS.map((option) => (
+                {workbookUi.sheetStyleOptions.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
                   </option>
@@ -8053,7 +8241,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               </select>
             </label>
             <button type="button" className="toolbar-action ghost" onClick={resetDocument}>
-              Nouveau
+              {t("toolbar.newDocument")}
             </button>
           </div>
         </div>
@@ -8216,7 +8404,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 <span className="canvas-insert-hint-glyph" aria-hidden="true">
                   {pendingInsertTool.kind === "text" ? "T" : pendingInsertTool.kind === "structured" ? renderStructuredToolGlyph(pendingInsertTool.toolId) : renderShortcutGlyph(findShortcutById(pendingInsertTool.shortcutId) ?? { id: pendingInsertTool.shortcutId, label: "?" })}
                 </span>
-                <span>{`Clique ou touche la feuille pour placer ${pendingInsertLabel.toLowerCase()}.`}</span>
+                <span>{t("canvas.insertHint", {item: pendingInsertLabel})}</span>
               </div>
             ) : null}
 
@@ -8757,7 +8945,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                                 type="text"
                                 className="floating-text-input"
                                 value={textBox.text}
-                                placeholder="Écris ici"
+                                placeholder={t("canvas.writeHere")}
                                 onMouseDown={(event) => {
                                   setCanvasQuickMenu(null);
                                   event.stopPropagation();
@@ -8813,7 +9001,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                       </div>
                     ) : (
                       <div className="floating-text-content">
-                        {textBox.text || "Zone de texte"}
+                        {textBox.text || t("canvas.emptyTextBox")}
                       </div>
                     )}
                   </article>
@@ -8932,8 +9120,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 <button
                   type="button"
                   className="canvas-quick-action canvas-selection-action"
-                  aria-label="Aligner"
-                  title="Aligner"
+                  aria-label={t("canvas.align")}
+                  title={t("canvas.align")}
                   onClick={alignSelectedItems}
                 >
                   <span className="align-grid-icon" aria-hidden="true">
@@ -8946,8 +9134,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 <button
                   type="button"
                   className="canvas-quick-action canvas-selection-action"
-                  aria-label="Supprimer"
-                  title="Supprimer"
+                  aria-label={t("toolbar.delete")}
+                  title={t("toolbar.delete")}
                   onClick={removeSelectedItems}
                 >
                   ×
@@ -8966,16 +9154,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 <button
                   type="button"
                   className="canvas-quick-close"
-                  aria-label="Fermer les réglages"
-                  title="Fermer"
+                  aria-label={t("canvas.closeSettings")}
+                  title={t("canvas.closeSettings")}
                   onClick={clearFloatingSelection}
                 >
                   ×
                 </button>
-                <p className="geometry-settings-title">Réglages</p>
+                <p className="geometry-settings-title">{t("canvas.settings")}</p>
                 {selectedGeometry.kind === "point" ? (
                   <label className="geometry-settings-field">
-                    <span>Nom du point</span>
+                    <span>{t("canvas.pointName")}</span>
                     <input
                       type="text"
                       value={selectedGeometry.label}
@@ -8986,7 +9174,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 ) : null}
                 {selectedGeometry.kind === "segment" ? (
                   <label className="geometry-settings-field">
-                    <span>Longueur (mm)</span>
+                    <span>{t("canvas.segmentLength")}</span>
                     <input
                       type="number"
                       min="1"
@@ -8998,7 +9186,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 ) : null}
                 {selectedGeometry.kind === "circle" ? (
                   <label className="geometry-settings-field">
-                    <span>Rayon (mm)</span>
+                    <span>{t("canvas.circleRadius")}</span>
                     <input
                       type="number"
                       min="1"
@@ -9022,34 +9210,34 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 <button
                   type="button"
                   className="canvas-quick-close"
-                  aria-label="Fermer le menu"
-                  title="Fermer"
+                  aria-label={t("canvas.closeMenu")}
+                  title={t("canvas.closeMenu")}
                   onClick={clearFloatingSelection}
                 >
                   ×
                 </button>
-                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label="Gras" title="Gras" onClick={toggleCanvasBold}>
+                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onClick={toggleCanvasBold}>
                   B
                 </button>
-                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label="Italique" title="Italique" onClick={toggleCanvasItalic}>
+                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onClick={toggleCanvasItalic}>
                   I
                 </button>
-                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label="Souligné" title="Souligné" onClick={toggleCanvasUnderline}>
+                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onClick={toggleCanvasUnderline}>
                   <span style={{ textDecoration: "underline" }}>U</span>
                 </button>
-                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label="Réduire" title="Réduire" onClick={() => adjustCanvasSize("down")}>
+                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onClick={() => adjustCanvasSize("down")}>
                   A-
                 </button>
-                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label="Agrandir" title="Agrandir" onClick={() => adjustCanvasSize("up")}>
+                <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onClick={() => adjustCanvasSize("up")}>
                   A+
                 </button>
-                {HIGHLIGHT_OPTIONS.filter((option) => option.value).map((option) => (
+                {workbookUi.highlightOptions.filter((option) => option.value).map((option) => (
                   <button
                     key={option.id}
                     type="button"
                     className={`canvas-quick-action canvas-text-highlight-chip ${(option.value || null) === selectedHighlightColor ? "canvas-text-highlight-chip-active" : ""}`}
-                    aria-label={`Surlignage ${option.label}`}
-                    title={`Surlignage ${option.label}`}
+                    aria-label={t("canvas.highlightColor", {color: option.label})}
+                    title={t("canvas.highlightColor", {color: option.label})}
                     onClick={() => applyCanvasHighlight((option.value || null) === selectedHighlightColor ? "" : option.value)}
                   >
                     <span className="canvas-text-highlight-sample" style={{ backgroundColor: option.value }} />
@@ -9073,8 +9261,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                   <button
                     type="button"
                     className="canvas-quick-close"
-                    aria-label="Fermer le menu"
-                    title="Fermer"
+                    aria-label={t("canvas.closeMenu")}
+                    title={t("canvas.closeMenu")}
                     onClick={() => setCanvasQuickMenu(null)}
                   >
                     ×
@@ -9133,16 +9321,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           <section className="block-modal" role="dialog" aria-modal="true" aria-labelledby="block-modal-title" onClick={(event) => event.stopPropagation()}>
             <div className="block-modal-head">
               <div>
-                <p className="card-kind">Bloc guidé</p>
-                <h2 id="block-modal-title">{getBlockTitle(modalState.block)}</h2>
-                <p className="toolbar-helper">Prépare le bloc, puis place-le librement sur la feuille.</p>
+                <p className="card-kind">{t("modal.guidedBlock")}</p>
+                <h2 id="block-modal-title">{getBlockTitle(modalState.block, workbookUi.blockTitles)}</h2>
+                <p className="toolbar-helper">{t("modal.guidedBlockHelper")}</p>
               </div>
               <div className="card-actions">
                 <button type="button" className="small-action" onClick={() => setModalState(null)}>
-                  Annuler
+                  {t("modal.cancel")}
                 </button>
                 <button type="button" className="small-action primary-inline-action" onClick={applyModalBlock}>
-                  {modalState.mode === "insert" ? "Insérer" : "Enregistrer"}
+                  {modalState.mode === "insert" ? t("modal.insert") : t("modal.save")}
                 </button>
               </div>
             </div>
@@ -9152,7 +9340,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
             <div className="block-modal-preview">
               <section className="export-math-block">
                 <div className="export-math-head">
-                  <span>Aperçu</span>
+                  <span>{t("modal.preview")}</span>
                 </div>
                 {renderMathPreview(modalState.block)}
               </section>
@@ -9166,16 +9354,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           <section className="block-modal" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title" onClick={(event) => event.stopPropagation()}>
             <div className="block-modal-head">
               <div>
-                <p className="card-kind">Confirmation</p>
-                <h2 id="reset-modal-title">Créer un nouveau document ?</h2>
-                <p className="toolbar-helper">La feuille actuelle sera effacée et remplacée par un nouveau devoir.</p>
+                <p className="card-kind">{t("modal.confirmation")}</p>
+                <h2 id="reset-modal-title">{t("modal.createNewDocument")}</h2>
+                <p className="toolbar-helper">{t("modal.createNewDocumentHelper")}</p>
               </div>
               <div className="card-actions">
                 <button type="button" className="small-action" onClick={() => setConfirmResetState(null)}>
-                  Annuler
+                  {t("modal.cancel")}
                 </button>
                 <button type="button" className="small-action primary-inline-action" onClick={confirmResetDocument}>
-                  Nouveau
+                  {t("modal.confirmNew")}
                 </button>
               </div>
             </div>
