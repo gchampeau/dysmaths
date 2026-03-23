@@ -425,6 +425,7 @@ export function WorkbookSidebar({
                     value={locale}
                     onChange={(event) => onLocaleChange(event.target.value)}
                     aria-label={t("toolbar.language")}
+                    data-testid="language-select"
                   >
                     {Object.entries(localeLabels).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -521,7 +522,7 @@ export function WorkbookActionBar({
           {isExporting === "print" ? t("toolbar.preparingPrint") : t("toolbar.print")}
         </button>
         <label className="sheet-style-picker sheet-style-picker-toolbar">
-          <select className="sheet-style-select" value={sheetStyle} onChange={(event) => onSheetStyleChange(event.target.value as SheetStyle)} aria-label={t("toolbar.sheetStyle")}>
+          <select className="sheet-style-select" value={sheetStyle} onChange={(event) => onSheetStyleChange(event.target.value as SheetStyle)} aria-label={t("toolbar.sheetStyle")} data-testid="sheet-style-select">
             {sheetStyleOptions.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.label}

@@ -37,6 +37,7 @@ export function FloatingMathBlockItem({
     <article
       ref={setNodeRef}
       className={`floating-math-block ${isSelected ? "floating-math-block-selected" : ""}`}
+      data-testid={`floating-math-block-${block.type}`}
       style={{
         left: `${block.x}px`,
         top: `${block.y}px`,
@@ -84,6 +85,7 @@ export function FloatingMathSymbolItem({
       type="button"
       ref={setNodeRef}
       className={`floating-math-symbol ${isVectorSymbol ? "floating-math-symbol-sum" : ""} ${symbol.kind === "integral" ? "floating-math-symbol-integral" : ""} ${isSelected ? "floating-math-symbol-selected" : ""}`}
+      data-testid={`floating-math-symbol-${symbol.kind}`}
       style={{
         left: `${symbol.x}px`,
         top: `${symbol.y}px`,
@@ -199,6 +201,7 @@ export function FloatingTextBoxItem({
     <article
       ref={setNodeRef}
       className={`floating-text-box ${textBox.variant === "note" ? "floating-text-box-note" : ""} ${isSelected ? "floating-text-box-selected" : ""}`}
+      data-testid={`floating-text-box-${textBox.variant}`}
       style={{
         left: `${textBox.x}px`,
         top: `${textBox.y}px`,

@@ -3728,7 +3728,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     columns: number,
     cellIndex: number
   ) {
-    const nextCellIndex = Math.max(0, Math.min(columns - 1, cellIndex));
+    const nextCellIndex = Math.max(0, cellIndex);
     let nextValue = value;
 
     if (getCellTextLength(value) < nextCellIndex) {
@@ -4941,6 +4941,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                 className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || activeGeometryTool ? "document-canvas-draw-mode" : ""} ${advancedTool === "highlight" ? "document-canvas-highlight-mode" : ""} ${activeGeometryTool === "protractor" ? "document-canvas-protractor-mode" : ""} ${pendingInsertTool ? "document-canvas-insert-mode" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || advancedTool === "select" || advancedTool === "move" || pendingInsertTool || activeGeometryTool ? "document-canvas-touch-locked" : ""}`}
                 style={{ "--canvas-type-size": `${getDefaultCanvasFontSize(state.sheetStyle)}rem` } as ReactCSSProperties}
                 ref={canvasRef}
+                data-testid="document-canvas"
                 onDragOver={handleCanvasDragOver}
                 onDragLeave={handleCanvasDragLeave}
                 onDrop={handleCanvasDrop}
@@ -4997,6 +4998,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               ref={editorRef}
               className="canvas-editor"
               contentEditable
+              data-testid="canvas-editor"
               suppressContentEditableWarning
               onMouseMove={(event) => updateInsertCursorPreview(event.clientX, event.clientY)}
               onMouseLeave={hideInsertCursorPreview}

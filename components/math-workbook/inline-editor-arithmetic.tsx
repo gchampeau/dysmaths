@@ -82,7 +82,7 @@ export function renderArithmeticInlineEditor({
     const lineValue = block[line];
     const caretKey = `${block.id}:${line}`;
     const caretPosition = numericFieldCaretPositions[caretKey] ?? Array.from(lineValue).length;
-    return getAlignedCaretCellIndex(lineValue, columns, "start", caretPosition);
+    return getAlignedCaretCellIndex(lineValue, columns, line === "result" ? "start" : "end", caretPosition);
   };
   const activeLine =
     currentField === "top" || currentField?.startsWith("carryTop")
@@ -121,10 +121,19 @@ export function renderArithmeticInlineEditor({
       const isActive = currentField === field;
       const activeCellIndex = isActive && activeResultCell?.blockId === block.id ? activeResultCell.cellIndex : null;
       const commitResultCell = (cellIndex: number, nextCharacter: string, move: "stay" | "left" | "right" = "right") => {
-        const nextValue = setAlignedCellCharacter(value, columns, "start", cellIndex, nextCharacter);
+        const isOverflowWrite = cellIndex === columns - 1 && nextCharacter.length > 0 && getAlignedCellCharacter(value, columns, "start", cellIndex).trim().length > 0;
+        const nextValue = isOverflowWrite
+          ? normalizeDivisionDecimalInput(`${value}${nextCharacter}`)
+          : setAlignedCellCharacter(value, columns, "start", cellIndex, nextCharacter);
         updateInlineBlockField(block.id, field, nextValue);
-        const nextCellIndex = move === "right" ? Math.min(columns - 1, cellIndex + 1) : move === "left" ? Math.max(0, cellIndex - 1) : cellIndex;
-        activateResultCell(block.id, nextValue, columns, nextCellIndex);
+        const nextCellIndex = isOverflowWrite
+          ? Array.from(nextValue).length - 1
+          : move === "right"
+            ? Math.min(columns - 1, cellIndex + 1)
+            : move === "left"
+              ? Math.max(0, cellIndex - 1)
+              : cellIndex;
+        activateResultCell(block.id, nextValue, Math.max(columns, Array.from(nextValue).length), nextCellIndex);
       };
 
       return (
@@ -242,7 +251,7 @@ export function renderArithmeticInlineEditor({
     const caretKey = `${block.id}:${field}`;
     const caretPosition = numericFieldCaretPositions[caretKey] ?? Array.from(value).length;
     const baseInputProps = bindInlineInput(field);
-    const targetCellIndex = getAlignedCaretCellIndex(value, columns, "start", caretPosition);
+    const targetCellIndex = getAlignedCaretCellIndex(value, columns, "end", caretPosition);
 
     return (
       <div className={`addition-number-field ${isActive ? "addition-number-field-active" : ""}`} style={{["--division-columns" as string]: columns}}>
@@ -265,12 +274,12 @@ export function renderArithmeticInlineEditor({
             updateNumericCaretPosition(caretKey, event.target.selectionStart ?? Array.from(nextValue).length);
           }}
         />
-        {renderDivisionCellRow(value, columns, `${displayClassName} addition-number-display ${isStrikeModeActive ? "addition-number-display-strike-mode" : ""}`, "start", isActive ? targetCellIndex : undefined, {
+        {renderDivisionCellRow(value, columns, `${displayClassName} addition-number-display ${isStrikeModeActive ? "addition-number-display-strike-mode" : ""}`, "end", isActive ? targetCellIndex : undefined, {
           field,
           struckCells: block.struckCells,
           onCellToggle: (cellIndex, cellValue) => {
             if (!isStrikeModeActive) {
-              activateNumericCellSelection(block.id, field, value, columns, "start", cellIndex);
+              activateNumericCellSelection(block.id, field, value, columns, "end", cellIndex);
               return;
             }
             if (!cellValue.trim()) return;

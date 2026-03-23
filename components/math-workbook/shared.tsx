@@ -2235,8 +2235,7 @@ export function getAlignedCellSelectionRange(
 ) {
   const characters = Array.from(value);
   const offset = align === "end" ? Math.max(0, columns - characters.length) : 0;
-  const visualIndex = align === "end" ? columns - 1 - cellIndex : cellIndex;
-  const characterIndex = visualIndex - offset;
+  const characterIndex = cellIndex - offset;
 
   if (characterIndex < 0) {
     return { start: 0, end: 0 };
@@ -2257,8 +2256,7 @@ export function getAlignedCellCharacter(
 ) {
   const characters = Array.from(value);
   const offset = align === "end" ? Math.max(0, columns - characters.length) : 0;
-  const visualIndex = align === "end" ? columns - 1 - cellIndex : cellIndex;
-  return characters[visualIndex - offset] ?? "";
+  return characters[cellIndex - offset] ?? "";
 }
 
 export function setAlignedCellCharacter(
@@ -2270,10 +2268,9 @@ export function setAlignedCellCharacter(
 ) {
   const characters = Array.from(value);
   const offset = align === "end" ? Math.max(0, columns - characters.length) : 0;
-  const visualIndex = align === "end" ? columns - 1 - cellIndex : cellIndex;
   const cells = Array.from({ length: columns }, (_, index) => characters[index - offset] ?? "");
 
-  cells[visualIndex] = nextCharacter;
+  cells[cellIndex] = nextCharacter;
 
   const nextValue = cells.join("");
   return normalizeDivisionDecimalInput(nextValue);
@@ -2300,7 +2297,7 @@ export function renderDivisionCellRow(
     <div className={`division-cell-row ${className}`} style={{ ["--division-columns" as string]: columns } as ReactCSSProperties}>
       {Array.from({ length: columns }).map((_, index) => {
         const cellValue = characters[index - offset] ?? "";
-        const cellIndex = align === "end" ? columns - 1 - index : index;
+        const cellIndex = index;
         const isStruck = options?.field ? hasStruckCell(options.struckCells ?? [], options.field, cellIndex) : false;
         const cellClassName = `division-cell ${targetCellIndex === index ? "division-cell-target" : ""} ${isStruck ? "division-cell-struck" : ""} ${options?.onCellToggle ? "division-cell-button" : ""}`;
 
@@ -2408,20 +2405,20 @@ export function renderColumnArithmeticPreview(block: AdditionBlock | Subtraction
   const resultCarryOverlay = renderCarryOverlay("result");
 
   return (
-    <div className="math-layout addition-layout">
-      <div className="addition-preview">
-        <div className={`addition-line-stack ${topCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
+      <div className="math-layout addition-layout">
+        <div className="addition-preview">
+          <div className={`addition-line-stack ${topCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
           {topCarryOverlay ? <div className="addition-line-carry-overlay">{topCarryOverlay}</div> : null}
           <div className="addition-line">
             <span className="addition-sign addition-sign-spacer" aria-hidden="true">{operator}</span>
-            {renderDivisionCellRow(block.top, columns, "addition-row addition-row-preview", "start", undefined, { field: "top", struckCells: block.struckCells })}
+            {renderDivisionCellRow(block.top, columns, "addition-row addition-row-preview", "end", undefined, { field: "top", struckCells: block.struckCells })}
           </div>
         </div>
         <div className={`addition-line-stack ${bottomCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>
           {bottomCarryOverlay ? <div className="addition-line-carry-overlay">{bottomCarryOverlay}</div> : null}
           <div className="addition-line">
             <span className="addition-sign">{operator}</span>
-            {renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation addition-row-preview", "start", undefined, { field: "bottom", struckCells: block.struckCells })}
+            {renderDivisionCellRow(block.bottom, columns, "addition-row addition-row-operation addition-row-preview", "end", undefined, { field: "bottom", struckCells: block.struckCells })}
           </div>
         </div>
         <div className={`addition-line-stack ${resultCarryOverlay ? "addition-line-stack-with-carry" : ""}`}>

@@ -59,7 +59,7 @@ export function GeometryCanvasLayer({
   createGeometryShapeFromDraft
 }: GeometryCanvasLayerProps) {
   return (
-    <svg className={`canvas-geometry-layer ${activeGeometryTool ? "canvas-geometry-layer-passive" : ""}`} width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+    <svg className={`canvas-geometry-layer ${activeGeometryTool ? "canvas-geometry-layer-passive" : ""}`} width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} aria-hidden="true" data-testid="geometry-layer">
       {geometry.map((shape) => {
         const isSelected = selectedGeometryIds.includes(shape.id);
         const bounds = getGeometryShapeBoundsPx(shape, width, height);
@@ -74,6 +74,7 @@ export function GeometryCanvasLayer({
               key={shape.id}
               ref={(node) => setGeometryNodeRef(shape.id, node)}
               className={`canvas-geometry-shape ${isSelected ? "canvas-geometry-shape-selected" : ""}`}
+              data-testid={`geometry-shape-${shape.kind}`}
               onMouseDown={(event) => {
                 if (activeGeometryTool) return;
                 startDraggingGeometry(shape.id, bounds.x, bounds.y, event);
@@ -99,6 +100,7 @@ export function GeometryCanvasLayer({
               key={shape.id}
               ref={(node) => setGeometryNodeRef(shape.id, node)}
               className={`canvas-geometry-shape ${isSelected ? "canvas-geometry-shape-selected" : ""}`}
+              data-testid={`geometry-shape-${shape.kind}`}
               onMouseDown={(event) => {
                 if (activeGeometryTool) return;
                 startDraggingGeometry(shape.id, bounds.x, bounds.y, event);
@@ -121,6 +123,7 @@ export function GeometryCanvasLayer({
               key={shape.id}
               ref={(node) => setGeometryNodeRef(shape.id, node)}
               className={`canvas-geometry-shape ${isSelected ? "canvas-geometry-shape-selected" : ""}`}
+              data-testid={`geometry-shape-${shape.kind}`}
               onMouseDown={(event) => {
                 if (activeGeometryTool) return;
                 startDraggingGeometry(shape.id, bounds.x, bounds.y, event);
@@ -149,6 +152,7 @@ export function GeometryCanvasLayer({
             key={shape.id}
             ref={(node) => setGeometryNodeRef(shape.id, node)}
             className={`canvas-geometry-shape ${isSelected ? "canvas-geometry-shape-selected" : ""}`}
+            data-testid={`geometry-shape-${shape.kind}`}
             onMouseDown={(event) => {
               if (activeGeometryTool) return;
               startDraggingGeometry(shape.id, bounds.x, bounds.y, event);

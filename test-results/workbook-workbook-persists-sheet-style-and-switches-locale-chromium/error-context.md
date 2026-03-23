@@ -1,0 +1,137 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - paragraph [ref=e6]: Geometry
+          - generic "Geometry tools" [ref=e7]:
+            - button "Point" [ref=e8]: •
+            - button "Segment" [ref=e9]: AB
+            - button "Line" [ref=e10]: ↔
+            - button "Ray" [ref=e11]: →
+            - button "Circle" [ref=e12]: ◯
+            - button "Compass" [ref=e13]: ⌒
+            - button "Ruler" [ref=e14]: cm
+            - button "Protractor" [ref=e15]:
+              - img [ref=e17]
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: Written operations
+          - generic "Insertion tools" [ref=e23]:
+            - button "Written fraction" [ref=e24]: a/b
+            - button "Written addition" [ref=e25]: +
+            - button "Written subtraction" [ref=e26]: "-"
+            - button "Written multiplication" [ref=e27]: ×
+            - button "Written division" [ref=e28]: ÷
+            - button "Power" [ref=e29]: aⁿ
+            - button "Graduated line" [ref=e30]:
+              - img [ref=e32]
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Common symbols
+          - generic "Common symbol shortcuts" [ref=e35]:
+            - button "Root" [ref=e36]: √
+            - button "=" [ref=e37]:
+              - generic [ref=e38]: =
+            - button "≠" [ref=e39]:
+              - generic [ref=e40]: ≠
+            - button "<" [ref=e41]:
+              - generic [ref=e42]: <
+            - button ">" [ref=e43]:
+              - generic [ref=e44]: ">"
+            - button "≤" [ref=e45]:
+              - generic [ref=e46]: ≤
+            - button "≥" [ref=e47]:
+              - generic [ref=e48]: ≥
+            - button "-" [ref=e49]:
+              - generic [ref=e50]: "-"
+            - button "×" [ref=e51]:
+              - generic [ref=e52]: ×
+            - button "÷" [ref=e53]:
+              - generic [ref=e54]: ÷
+            - button "[" [ref=e55]:
+              - generic [ref=e56]: "["
+            - button "]" [ref=e57]:
+              - generic [ref=e58]: "]"
+            - button "%" [ref=e59]:
+              - generic [ref=e60]: "%"
+            - button "π" [ref=e61]:
+              - generic [ref=e62]: π
+            - button "∠ABC" [ref=e63]:
+              - generic [ref=e64]: ∠ABC
+            - button "∥" [ref=e65]:
+              - generic [ref=e66]: ∥
+            - button "⟂" [ref=e67]:
+              - generic [ref=e68]: ⟂
+            - button "°" [ref=e69]:
+              - generic [ref=e70]: °
+        - generic [ref=e71]:
+          - paragraph [ref=e72]: High school tools
+          - generic "High school shortcuts" [ref=e73]:
+            - button "Σ" [ref=e74]:
+              - generic [ref=e75]: Σ
+            - button "∫" [ref=e76]:
+              - generic [ref=e77]: ∫
+        - generic "Formatting" [ref=e78]:
+          - paragraph [ref=e79]: Formatting
+          - generic [ref=e80]:
+            - button "Ink" [ref=e81] [cursor=pointer]
+            - button "Orange" [ref=e82] [cursor=pointer]
+            - button "Blue" [ref=e83] [cursor=pointer]
+            - button "Green" [ref=e84] [cursor=pointer]
+            - button "Pink" [ref=e85] [cursor=pointer]
+          - generic [ref=e86]:
+            - button "Bold" [ref=e87] [cursor=pointer]: B
+            - button "Italic" [ref=e88] [cursor=pointer]: I
+            - button "Underline" [ref=e89] [cursor=pointer]: U
+            - button "Decrease" [ref=e90] [cursor=pointer]: A-
+            - button "Increase" [ref=e91] [cursor=pointer]: A+
+            - button "Highlighter" [ref=e93] [cursor=pointer]:
+              - generic [ref=e98]: ▾
+            - button "Freehand drawing" [ref=e99]: ✎
+          - generic "Advanced tools" [ref=e100]:
+            - button "Selection" [ref=e101]
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - button "Settings" [ref=e105] [cursor=pointer]:
+            - img [ref=e107]
+            - generic [ref=e109]: Settings
+          - button "Install" [ref=e110] [cursor=pointer]:
+            - img [ref=e112]
+            - generic [ref=e114]: Install
+        - paragraph [ref=e115]:
+          - text: Designed by
+          - generic [ref=e116]:
+            - link "Guillaume Champeau" [ref=e117] [cursor=pointer]:
+              - /url: https://www.champeau.info
+            - link "GitHub repository" [ref=e118] [cursor=pointer]:
+              - /url: https://github.com/gchampeau/dysmaths
+              - img [ref=e119]
+    - generic [ref=e121]:
+      - generic:
+        - generic [ref=e122]:
+          - button "Undo" [disabled] [ref=e123] [cursor=pointer]
+          - button "Redo" [disabled] [ref=e124] [cursor=pointer]
+        - generic [ref=e125]:
+          - button "PDF" [ref=e126] [cursor=pointer]
+          - button "PNG" [ref=e127] [cursor=pointer]
+          - button "Print" [ref=e128] [cursor=pointer]
+          - combobox "Sheet style" [ref=e130]:
+            - option "Seyes lines"
+            - option "Large grid"
+            - option "Small grid"
+            - option "Ruled paper" [selected]
+            - option "Blank paper"
+          - button "New" [ref=e131] [cursor=pointer]
+      - generic [ref=e135]:
+        - img
+        - article [ref=e137]:
+          - generic [ref=e138]: "Full name:"
+        - article [ref=e139]:
+          - generic [ref=e140]: "Class:"
+        - article [ref=e141]:
+          - generic [ref=e142]: "Date:"
+        - img
+  - alert [ref=e143]
+```
