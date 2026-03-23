@@ -1,0 +1,23 @@
+Dysmaths
+
+Copyright (C) 2026 Dysmaths contributors
+
+This project is licensed under the GNU Affero General Public License v3.0.
+See the file `LICENSE` for the full license text.
+
+This project includes third-party software under their own licenses, including but not limited to:
+
+- Next.js
+- React
+- React DOM
+- TypeScript
+- next-intl
+- Lexical
+- MathLive
+- KaTeX
+- jsPDF
+- docx
+- file-saver
+- html-to-image
+
+The names above are provided as a convenience and do not replace the applicable license terms for each dependency.
