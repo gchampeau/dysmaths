@@ -17,7 +17,7 @@ type Messages = {
     sheetStyles: Record<"seyes" | "largeGrid" | "smallGrid" | "lined" | "blank", string>;
     geometryTools: Record<"point" | "segment" | "line" | "ray" | "circle" | "compass" | "measure" | "protractor", {label: string; hint: string}>;
     structuredTools: Record<"fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root", {label: string; hint: string}>;
-    shortcutGroups: Record<"essentials" | "geometry" | "lycee", string>;
+    shortcutGroups: Record<"essentials" | "geometry" | "highSchool", string>;
     shortcuts: Record<"equal" | "neq" | "lt" | "gt" | "leq" | "geq" | "minus" | "times" | "div" | "lbracket" | "rbracket" | "percent" | "pi" | "angle" | "parallel" | "perpendicular" | "degree" | "sum" | "integral", string>;
     toolbar: {
       closeTools: string;
@@ -28,8 +28,8 @@ type Messages = {
       insertionTools: string;
       commonSymbols: string;
       commonSymbolShortcuts: string;
-      lyceeTools: string;
-      lyceeShortcuts: string;
+      highSchoolTools: string;
+      highSchoolShortcuts: string;
       formatting: string;
       bold: string;
       italic: string;
@@ -188,7 +188,7 @@ const en: Messages = {
     shortcutGroups: {
       essentials: "Essentials",
       geometry: "Geometry",
-      lycee: "High school"
+      highSchool: "High school"
     },
     shortcuts: {
       equal: "Add =",
@@ -220,8 +220,8 @@ const en: Messages = {
       insertionTools: "Insertion tools",
       commonSymbols: "Common symbols",
       commonSymbolShortcuts: "Common symbol shortcuts",
-      lyceeTools: "High school tools",
-      lyceeShortcuts: "High school shortcuts",
+      highSchoolTools: "High school tools",
+      highSchoolShortcuts: "High school shortcuts",
       formatting: "Formatting",
       bold: "Bold",
       italic: "Italic",
@@ -389,7 +389,7 @@ const fr: Messages = {
     shortcutGroups: {
       essentials: "Essentiels",
       geometry: "Géométrie",
-      lycee: "Lycée"
+      highSchool: "Lycée"
     },
     shortcuts: {
       equal: "Ajoute =",
@@ -421,8 +421,8 @@ const fr: Messages = {
       insertionTools: "Outils d'insertion",
       commonSymbols: "Symboles courants",
       commonSymbolShortcuts: "Raccourcis symboles courants",
-      lyceeTools: "Outils lycée",
-      lyceeShortcuts: "Raccourcis lycée",
+      highSchoolTools: "Outils lycée",
+      highSchoolShortcuts: "Raccourcis lycée",
       formatting: "Mise en forme",
       bold: "Gras",
       italic: "Italique",
@@ -590,7 +590,7 @@ const es: Messages = {
     shortcutGroups: {
       essentials: "Esenciales",
       geometry: "Geometría",
-      lycee: "Bachillerato"
+      highSchool: "Bachillerato"
     },
     shortcuts: {
       equal: "Añadir =",
@@ -622,8 +622,8 @@ const es: Messages = {
       insertionTools: "Herramientas de inserción",
       commonSymbols: "Símbolos frecuentes",
       commonSymbolShortcuts: "Atajos de símbolos frecuentes",
-      lyceeTools: "Herramientas de bachillerato",
-      lyceeShortcuts: "Atajos de bachillerato",
+      highSchoolTools: "Herramientas de bachillerato",
+      highSchoolShortcuts: "Atajos de bachillerato",
       formatting: "Formato",
       bold: "Negrita",
       italic: "Cursiva",

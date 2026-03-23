@@ -21,7 +21,7 @@ The goal is to make math work less frustrating and more accessible, while keepin
 
 Official website: [Official website](https://dysmaths.com) · Created by [Guillaume Champeau](https://www.champeau.info)
 
-The repository currently includes documentation for the long-division block in [`docs/division-posee.md`](./docs/division-posee.md).
+The repository currently includes documentation for the long-division block in [`docs/division-written.md`](./docs/division-written.md).
 
 ## Features
 

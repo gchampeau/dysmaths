@@ -16,7 +16,7 @@ import {
 } from "lexical";
 import { createContext, type JSX, useContext } from "react";
 
-export type StudyMode = "college" | "lycee";
+export type StudyMode = "middleSchool" | "highSchool";
 
 export type FractionBlock = {
   id: string;
@@ -68,25 +68,25 @@ export const STRUCTURED_TOOLS: StructuredTool[] = [
     id: "fraction",
     label: "Fraction posée",
     hint: "Numérateur au-dessus, dénominateur en dessous",
-    modes: ["college", "lycee"]
+    modes: ["middleSchool", "highSchool"]
   },
   {
     id: "division",
     label: "Division posée",
     hint: "Diviseur, dividende, quotient et reste",
-    modes: ["college", "lycee"]
+    modes: ["middleSchool", "highSchool"]
   },
   {
     id: "power",
     label: "Puissance",
     hint: "Base, exposant et résultat",
-    modes: ["college", "lycee"]
+    modes: ["middleSchool", "highSchool"]
   },
   {
     id: "root",
     label: "Racine",
     hint: "Radicande et résultat",
-    modes: ["college", "lycee"]
+    modes: ["middleSchool", "highSchool"]
   }
 ];
 

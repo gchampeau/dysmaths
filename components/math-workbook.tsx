@@ -22,7 +22,7 @@ import {localeLabels, type AppLocale} from "@/i18n/routing";
 import {usePathname, useRouter} from "@/i18n/navigation";
 import {PWA_INSTALLABLE_EVENT, PWA_INSTALLED_EVENT} from "@/components/pwa-registration";
 
-type StudyMode = "college" | "lycee";
+type StudyMode = "middleSchool" | "highSchool";
 type SheetStyle = "seyes" | "large-grid" | "small-grid" | "lined" | "blank";
 type StructuredTool = "fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root";
 type UtilityMenu = "highlight" | "settings" | "install" | null;
@@ -643,7 +643,7 @@ function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: DefaultDoc
   return {
     schemaVersion: WRITER_STATE_SCHEMA_VERSION,
     title: labels.title,
-    mode: "college",
+    mode: "middleSchool",
     sheetStyle,
     activeColor: DEFAULT_ACTIVE_COLOR,
     activeHighlightColor: "rgba(255, 226, 92, 0.58)",
@@ -693,51 +693,51 @@ const GEOMETRY_TOOL_DEFINITIONS = [
 ] as const;
 
 const STRUCTURED_TOOL_DEFINITIONS = [
-  { id: "fraction", key: "fraction", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "addition", key: "addition", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "subtraction", key: "subtraction", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "multiplication", key: "multiplication", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "division", key: "division", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "power", key: "power", modes: ["college", "lycee"] as StudyMode[] },
-  { id: "root", key: "root", modes: ["college", "lycee"] as StudyMode[] }
+  { id: "fraction", key: "fraction", modes: ["middleSchool", "highSchool"] as StudyMode[] },
+  { id: "addition", key: "addition", modes: ["middleSchool", "highSchool"] as StudyMode[] },
+  { id: "subtraction", key: "subtraction", modes: ["middleSchool", "highSchool"] as StudyMode[] },
+  { id: "multiplication", key: "multiplication", modes: ["middleSchool", "highSchool"] as StudyMode[] },
+  { id: "division", key: "division", modes: ["middleSchool", "highSchool"] as StudyMode[] },
+  { id: "power", key: "power", modes: ["middleSchool", "highSchool"] as StudyMode[] },
+  { id: "root", key: "root", modes: ["middleSchool", "highSchool"] as StudyMode[] }
 ] as const;
 
 const INLINE_SHORTCUT_DEFINITIONS: Array<{
-  nameKey: "essentials" | "geometry" | "lycee";
+  nameKey: "essentials" | "geometry" | "highSchool";
   items: Array<InlineShortcutItem & {hintKey: keyof ReturnType<typeof createWorkbookUi>["shortcutHints"]}>;
 }> = [
   {
     nameKey: "essentials",
     items: [
-      { id: "equal", label: "=", hintKey: "equal", hint: "", content: " = ", modes: ["college", "lycee"] },
-      { id: "neq", label: "≠", hintKey: "neq", hint: "", content: " ≠ ", modes: ["college", "lycee"] },
-      { id: "lt", label: "<", hintKey: "lt", hint: "", content: " < ", modes: ["college", "lycee"] },
-      { id: "gt", label: ">", hintKey: "gt", hint: "", content: " > ", modes: ["college", "lycee"] },
-      { id: "leq", label: "≤", hintKey: "leq", hint: "", content: " ≤ ", modes: ["college", "lycee"] },
-      { id: "geq", label: "≥", hintKey: "geq", hint: "", content: " ≥ ", modes: ["college", "lycee"] },
-      { id: "minus", label: "-", hintKey: "minus", hint: "", content: " - ", modes: ["college", "lycee"] },
-      { id: "times", label: "×", hintKey: "times", hint: "", content: " × ", modes: ["college", "lycee"] },
-      { id: "div", label: "÷", hintKey: "div", hint: "", content: " ÷ ", modes: ["college", "lycee"] },
-      { id: "lbracket", label: "[", hintKey: "lbracket", hint: "", content: "[", modes: ["college", "lycee"] },
-      { id: "rbracket", label: "]", hintKey: "rbracket", hint: "", content: "]", modes: ["college", "lycee"] },
-      { id: "percent", label: "%", hintKey: "percent", hint: "", content: "%", modes: ["college", "lycee"] },
-      { id: "pi", label: "π", hintKey: "pi", hint: "", content: "π", modes: ["college", "lycee"] }
+      { id: "equal", label: "=", hintKey: "equal", hint: "", content: " = ", modes: ["middleSchool", "highSchool"] },
+      { id: "neq", label: "≠", hintKey: "neq", hint: "", content: " ≠ ", modes: ["middleSchool", "highSchool"] },
+      { id: "lt", label: "<", hintKey: "lt", hint: "", content: " < ", modes: ["middleSchool", "highSchool"] },
+      { id: "gt", label: ">", hintKey: "gt", hint: "", content: " > ", modes: ["middleSchool", "highSchool"] },
+      { id: "leq", label: "≤", hintKey: "leq", hint: "", content: " ≤ ", modes: ["middleSchool", "highSchool"] },
+      { id: "geq", label: "≥", hintKey: "geq", hint: "", content: " ≥ ", modes: ["middleSchool", "highSchool"] },
+      { id: "minus", label: "-", hintKey: "minus", hint: "", content: " - ", modes: ["middleSchool", "highSchool"] },
+      { id: "times", label: "×", hintKey: "times", hint: "", content: " × ", modes: ["middleSchool", "highSchool"] },
+      { id: "div", label: "÷", hintKey: "div", hint: "", content: " ÷ ", modes: ["middleSchool", "highSchool"] },
+      { id: "lbracket", label: "[", hintKey: "lbracket", hint: "", content: "[", modes: ["middleSchool", "highSchool"] },
+      { id: "rbracket", label: "]", hintKey: "rbracket", hint: "", content: "]", modes: ["middleSchool", "highSchool"] },
+      { id: "percent", label: "%", hintKey: "percent", hint: "", content: "%", modes: ["middleSchool", "highSchool"] },
+      { id: "pi", label: "π", hintKey: "pi", hint: "", content: "π", modes: ["middleSchool", "highSchool"] }
     ]
   },
   {
     nameKey: "geometry",
     items: [
-      { id: "angle", label: "∠ABC", hintKey: "angle", hint: "", content: "∠ABC", modes: ["college", "lycee"] },
-      { id: "parallel", label: "∥", hintKey: "parallel", hint: "", content: " ∥ ", modes: ["college", "lycee"] },
-      { id: "perpendicular", label: "⟂", hintKey: "perpendicular", hint: "", content: " ⟂ ", modes: ["college", "lycee"] },
-      { id: "degree", label: "°", hintKey: "degree", hint: "", content: "°", modes: ["college", "lycee"] }
+      { id: "angle", label: "∠ABC", hintKey: "angle", hint: "", content: "∠ABC", modes: ["middleSchool", "highSchool"] },
+      { id: "parallel", label: "∥", hintKey: "parallel", hint: "", content: " ∥ ", modes: ["middleSchool", "highSchool"] },
+      { id: "perpendicular", label: "⟂", hintKey: "perpendicular", hint: "", content: " ⟂ ", modes: ["middleSchool", "highSchool"] },
+      { id: "degree", label: "°", hintKey: "degree", hint: "", content: "°", modes: ["middleSchool", "highSchool"] }
     ]
   },
   {
-    nameKey: "lycee",
+    nameKey: "highSchool",
     items: [
-      { id: "sum", label: "Σ", hintKey: "sum", hint: "", content: "Σ(k=1→n)", modes: ["lycee"] },
-      { id: "integral", label: "∫", hintKey: "integral", hint: "", content: "∫[a;b]", modes: ["lycee"] }
+      { id: "sum", label: "Σ", hintKey: "sum", hint: "", content: "Σ(k=1→n)", modes: ["highSchool"] },
+      { id: "integral", label: "∫", hintKey: "integral", hint: "", content: "∫[a;b]", modes: ["highSchool"] }
     ]
   }
 ];
@@ -1742,7 +1742,7 @@ function parseStoredState(raw: string, fallbackSheetStyle: SheetStyle, labels: D
 
     if (
       typeof parsed.title !== "string" ||
-      (parsed.mode !== "college" && parsed.mode !== "lycee") ||
+      (parsed.mode !== "middleSchool" && parsed.mode !== "highSchool") ||
       typeof parsed.textHtml !== "string" ||
       !Array.isArray(parsed.blocks)
     ) {
@@ -2779,9 +2779,9 @@ export function MathWorkbook() {
       ),
     [activeInlineShortcuts]
   );
-  const commonInlineShortcuts = useMemo(() => activeInlineShortcuts.flatMap((group) => group.items).filter((item) => item.modes.includes("college")), [activeInlineShortcuts]);
-  const visibleLyceeInlineShortcuts = useMemo(
-    () => activeInlineShortcuts.flatMap((group) => group.items).filter((item) => item.modes.length === 1 && item.modes[0] === "lycee"),
+  const commonInlineShortcuts = useMemo(() => activeInlineShortcuts.flatMap((group) => group.items).filter((item) => item.modes.includes("middleSchool")), [activeInlineShortcuts]);
+  const visibleHighSchoolInlineShortcuts = useMemo(
+    () => activeInlineShortcuts.flatMap((group) => group.items).filter((item) => item.modes.length === 1 && item.modes[0] === "highSchool"),
     [activeInlineShortcuts]
   );
   const selectedBlockId =
@@ -8659,9 +8659,9 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
-            <p className="sidebar-block-label">{t("toolbar.lyceeTools")}</p>
-            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label={t("toolbar.lyceeShortcuts")}>
-              {visibleLyceeInlineShortcuts.map((shortcut) => (
+            <p className="sidebar-block-label">{t("toolbar.highSchoolTools")}</p>
+            <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label={t("toolbar.highSchoolShortcuts")}>
+              {visibleHighSchoolInlineShortcuts.map((shortcut) => (
                 <button
                   key={shortcut.id}
                   type="button"
