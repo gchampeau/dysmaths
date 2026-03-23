@@ -1,6 +1,6 @@
 # Dysmaths
 
-Dysmaths is the official web app for writing and organizing math work in a simpler, more visual way.
+Dysmaths is the official web app for writing and organizing math and geometry work in a simpler, more visual way.
 
 It is designed for children who need extra support with writing, especially children with specific learning differences such as:
 
@@ -11,6 +11,7 @@ It is designed for children who need extra support with writing, especially chil
 Dysmaths helps users:
 
 - write math directly in the browser
+- work with geometry as well as algebra and other math content
 - work with a cleaner, more guided layout
 - use a school-style long division tool
 - edit math blocks without relying on handwriting
@@ -22,6 +23,10 @@ The goal is to make math work less frustrating and more accessible, while keepin
 Official website: [Official website](https://dysmaths.com) · Created by [Guillaume Champeau](https://www.champeau.info)
 
 The repository currently includes documentation for the long-division block in [`docs/division-written.md`](./docs/division-written.md).
+
+## Screenshot
+
+![Dysmaths screenshot](/img/screenshot.png)
 
 ## Features
 

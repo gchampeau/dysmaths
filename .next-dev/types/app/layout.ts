@@ -1,4 +1,4 @@
-// File: C:\Users\micro\Documents\Dev\maths-facile\app\layout.tsx
+// File: C:\Users\micro\Documents\Dev\dysmaths\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

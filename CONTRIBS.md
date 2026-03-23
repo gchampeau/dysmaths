@@ -2,11 +2,14 @@
 
 Thanks for your interest in contributing.
 
+The project lives on GitHub at [github.com/gchampeau/dysmaths](https://github.com/gchampeau/dysmaths/).
+
 ## Before you start
 
-- Check whether an issue already exists for the change you want to make.
+- Open or check an issue on GitHub before starting work on a change.
 - Keep changes focused and avoid unrelated refactors.
 - Preserve the existing math-editing behavior unless the change is explicitly about that area.
+- Keep in mind the main goal of the project is to empower children through ease of use
 
 ## Development workflow
 
@@ -14,7 +17,8 @@ Thanks for your interest in contributing.
 2. Run the app locally with `npm run dev`.
 3. Make your changes.
 4. Run `npm run lint` and, if relevant, `npm run build`.
-5. Open a pull request with a clear description of the change and any UI or behavior impact.
+5. Open a pull request on GitHub with a clear description of the change and any UI or behavior impact.
+6. Link the pull request to the relevant issue when applicable.
 
 ## Code style
 
@@ -36,7 +40,7 @@ Examples of useful contributions include:
 
 ## Reporting issues
 
-When reporting a bug, include:
+Open issues directly on GitHub. When reporting a bug, include:
 
 - what you expected
 - what actually happened
@@ -46,4 +50,4 @@ When reporting a bug, include:
 
 ## License note
 
-By contributing to this project, you agree that your contributions will be licensed under the same AGPL-3.0 terms as the rest of the repository.
+By contributing to this project, you agree that your contributions will be licensed under the same AGPL-3.0 terms as the rest of the repository, and you authorize dysmaths.com owner to use, reproduce, sublicense and distribute your contributions worldwide.
