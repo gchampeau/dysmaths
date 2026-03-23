@@ -4,7 +4,7 @@ Dysmaths screenshot:
 
 ![Dysmaths screenshot](./public/img/screenshot.png)
 
-Dysmaths is the official web app for writing and organizing math and geometry work in a simpler, more visual way.
+Dysmaths is a web app for writing and organizing math and geometry work in a simpler, more visual way, to be used in school or for homework.
 
 It is designed for children who need extra support with writing, especially children with specific learning differences such as:
 
