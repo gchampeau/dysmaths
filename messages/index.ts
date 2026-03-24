@@ -17,8 +17,8 @@ type Messages = {
     sheetStyles: Record<"seyes" | "largeGrid" | "smallGrid" | "lined" | "blank", string>;
     geometryTools: Record<"point" | "segment" | "line" | "ray" | "circle" | "compass" | "measure" | "protractor", {label: string; hint: string}>;
     structuredTools: Record<"fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root", {label: string; hint: string}>;
-    shortcutGroups: Record<"essentials" | "geometry" | "highSchool", string>;
-    shortcuts: Record<"equal" | "neq" | "lt" | "gt" | "leq" | "geq" | "minus" | "times" | "div" | "lbracket" | "rbracket" | "percent" | "pi" | "angle" | "parallel" | "perpendicular" | "degree" | "sum" | "integral", string>;
+    shortcutGroups: Record<"essentials" | "geometry" | "highSchool" | "variables", string>;
+    shortcuts: Record<"equal" | "neq" | "lt" | "gt" | "leq" | "geq" | "minus" | "times" | "div" | "lbracket" | "rbracket" | "percent" | "pi" | "angle" | "parallel" | "perpendicular" | "degree" | "sum" | "integral" | "scriptX" | "scriptY" | "scriptZ", string>;
     toolbar: {
       closeTools: string;
       geometry: string;
@@ -131,6 +131,29 @@ type Messages = {
       clickCell: string;
     };
     blockTitles: Record<"fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root" | "default", string>;
+    profile: {
+      selectProfile: string;
+      noProfile: string;
+      createProfile: string;
+      editProfile: string;
+      deleteProfile: string;
+      deleteProfileConfirm: string;
+      firstName: string;
+      lastName: string;
+      className: string;
+      preferredSheetStyle: string;
+      preferredMode: string;
+      middleSchool: string;
+      highSchool: string;
+      save: string;
+      cancel: string;
+      switcherHint: string;
+      visibleFields: string;
+      showName: string;
+      showClass: string;
+      showDate: string;
+      highlightOnHover: string;
+    };
   };
 };
 
@@ -188,7 +211,8 @@ const en: Messages = {
     shortcutGroups: {
       essentials: "Essentials",
       geometry: "Geometry",
-      highSchool: "High school"
+      highSchool: "High school",
+      variables: "Variables"
     },
     shortcuts: {
       equal: "Add =",
@@ -209,7 +233,10 @@ const en: Messages = {
       perpendicular: "Perpendicular",
       degree: "Degree",
       sum: "Sum",
-      integral: "Integral"
+      integral: "Integral",
+      scriptX: "Script x",
+      scriptY: "Script y",
+      scriptZ: "Script z"
     },
     toolbar: {
       closeTools: "Close tools",
@@ -331,6 +358,29 @@ const en: Messages = {
       power: "Power",
       root: "Root",
       default: "Block"
+    },
+    profile: {
+      selectProfile: "Profile",
+      noProfile: "No profile",
+      createProfile: "New profile",
+      editProfile: "Edit",
+      deleteProfile: "Delete",
+      deleteProfileConfirm: "Delete this profile?",
+      firstName: "First name",
+      lastName: "Last name",
+      className: "Class",
+      preferredSheetStyle: "Sheet style",
+      preferredMode: "Level",
+      middleSchool: "Middle school",
+      highSchool: "High school",
+      save: "Save",
+      cancel: "Cancel",
+      switcherHint: "Select user profile. Edit profiles in settings.",
+      visibleFields: "Visible on all pages",
+      showName: "Name",
+      showClass: "Class",
+      showDate: "Date",
+      highlightOnHover: "Highlight elements on hover"
     }
   }
 };
@@ -389,7 +439,8 @@ const fr: Messages = {
     shortcutGroups: {
       essentials: "Essentiels",
       geometry: "Géométrie",
-      highSchool: "Lycée"
+      highSchool: "Lycée",
+      variables: "Variables"
     },
     shortcuts: {
       equal: "Ajoute =",
@@ -410,7 +461,10 @@ const fr: Messages = {
       perpendicular: "Perpendiculaire",
       degree: "Degré",
       sum: "Somme",
-      integral: "Intégrale"
+      integral: "Intégrale",
+      scriptX: "x script",
+      scriptY: "y script",
+      scriptZ: "z script"
     },
     toolbar: {
       closeTools: "Fermer les outils",
@@ -532,6 +586,29 @@ const fr: Messages = {
       power: "Puissance",
       root: "Racine",
       default: "Bloc"
+    },
+    profile: {
+      selectProfile: "Profil",
+      noProfile: "Aucun profil",
+      createProfile: "Nouveau profil",
+      editProfile: "Modifier",
+      deleteProfile: "Supprimer",
+      deleteProfileConfirm: "Supprimer ce profil ?",
+      firstName: "Prénom",
+      lastName: "Nom",
+      className: "Classe",
+      preferredSheetStyle: "Style de feuille",
+      preferredMode: "Niveau",
+      middleSchool: "Collège",
+      highSchool: "Lycée",
+      save: "Enregistrer",
+      cancel: "Annuler",
+      switcherHint: "Sélection du profil utilisateur. Modifier les profils dans les paramètres.",
+      visibleFields: "Visible sur toutes les pages",
+      showName: "Nom",
+      showClass: "Classe",
+      showDate: "Date",
+      highlightOnHover: "Encadrer les éléments au survol"
     }
   }
 };
@@ -590,7 +667,8 @@ const es: Messages = {
     shortcutGroups: {
       essentials: "Esenciales",
       geometry: "Geometría",
-      highSchool: "Bachillerato"
+      highSchool: "Bachillerato",
+      variables: "Variables"
     },
     shortcuts: {
       equal: "Añadir =",
@@ -611,7 +689,10 @@ const es: Messages = {
       perpendicular: "Perpendicular",
       degree: "Grado",
       sum: "Suma",
-      integral: "Integral"
+      integral: "Integral",
+      scriptX: "x script",
+      scriptY: "y script",
+      scriptZ: "z script"
     },
     toolbar: {
       closeTools: "Cerrar herramientas",
@@ -733,6 +814,29 @@ const es: Messages = {
       power: "Potencia",
       root: "Raíz",
       default: "Bloque"
+    },
+    profile: {
+      selectProfile: "Perfil",
+      noProfile: "Sin perfil",
+      createProfile: "Nuevo perfil",
+      editProfile: "Editar",
+      deleteProfile: "Eliminar",
+      deleteProfileConfirm: "¿Eliminar este perfil?",
+      firstName: "Nombre",
+      lastName: "Apellidos",
+      className: "Clase",
+      preferredSheetStyle: "Tipo de hoja",
+      preferredMode: "Nivel",
+      middleSchool: "Secundaria",
+      highSchool: "Bachillerato",
+      save: "Guardar",
+      cancel: "Cancelar",
+      switcherHint: "Selección del perfil de usuario. Editar perfiles en los ajustes.",
+      visibleFields: "Visible en todas las páginas",
+      showName: "Nombre",
+      showClass: "Clase",
+      showDate: "Fecha",
+      highlightOnHover: "Resaltar elementos al pasar el ratón"
     }
   }
 };

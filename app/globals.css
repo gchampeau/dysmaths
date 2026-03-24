@@ -263,6 +263,13 @@ button {
   fill: currentColor;
 }
 
+.sidebar-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.15);
+}
+
 .sidebar-settings-panel {
   position: absolute;
   left: 0;
@@ -278,6 +285,13 @@ button {
     0 8px 16px rgba(36, 51, 66, 0.06);
 }
 
+.sidebar-settings-portal {
+  position: fixed;
+  left: 1rem;
+  bottom: 4rem;
+  z-index: 51;
+}
+
 .sidebar-settings-field {
   justify-items: stretch;
 }
@@ -287,6 +301,135 @@ button {
   color: color-mix(in srgb, var(--ink) 72%, white);
   font-size: 0.75rem;
   line-height: 1.45;
+}
+
+.sidebar-profile-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.sidebar-profile-actions {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.sidebar-profile-action {
+  min-width: 2rem;
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(92, 108, 129, 0.15);
+  border-radius: 10px;
+  background: rgba(255, 252, 247, 0.94);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.sidebar-profile-action:hover {
+  border-color: color-mix(in srgb, var(--accent) 24%, white);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.profile-switcher {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.profile-switcher-select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.profile-switcher-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid rgba(92, 108, 129, 0.16);
+  background: rgba(255, 252, 247, 0.94);
+  color: color-mix(in srgb, var(--ink) 50%, white);
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.profile-switcher-badge-active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 92%, white) 0%, var(--accent-strong) 100%);
+  color: #fffdf9;
+  border-color: transparent;
+}
+
+.profile-modal {
+  width: min(400px, 100%);
+}
+
+.profile-modal-fields {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem 1.2rem 1.2rem;
+}
+
+.profile-modal-field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 72%, white);
+}
+
+.profile-modal-fieldset {
+  border: 1px solid rgba(92, 108, 129, 0.12);
+  border-radius: 14px;
+  padding: 0.5rem 0.7rem;
+  margin: 0;
+}
+
+.profile-modal-fieldset legend {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 72%, white);
+  padding: 0 0.3rem;
+}
+
+.profile-modal-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.profile-modal-checkbox input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.profile-modal-input {
+  min-height: 2.5rem;
+  padding: 0.44rem 0.82rem;
+  border: 1px solid rgba(92, 108, 129, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 252, 247, 0.94);
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .sidebar-credit {
@@ -433,10 +576,14 @@ button {
   padding-inline: 0.58rem;
 }
 
-.toolbar-highlight-button-active {
+.chip-button.toolbar-highlight-button-active {
   background: var(--ink);
   color: #fffdf9;
   border-color: transparent;
+}
+
+.chip-button.toolbar-highlight-button-active:hover {
+  background: color-mix(in srgb, var(--ink) 82%, var(--paper));
 }
 
 .toolbar-highlight-marker {
@@ -474,6 +621,11 @@ button {
   transform-origin: left center;
 }
 
+.toolbar-highlight-button-active .toolbar-highlight-marker-body,
+.toolbar-highlight-button-active .toolbar-highlight-marker-tip {
+  background: #fffdf9;
+}
+
 .toolbar-highlight-marker-line {
   left: 0.72rem;
   bottom: 0.02rem;
@@ -503,6 +655,20 @@ button {
   border-radius: 18px;
   background: rgba(255, 253, 249, 0.98);
   box-shadow: 0 16px 36px rgba(36, 51, 66, 0.1);
+}
+
+.toolbar-highlight-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.toolbar-highlight-portal {
+  position: fixed;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 51;
 }
 
 .toolbar-highlight-swatch {
@@ -602,6 +768,11 @@ button {
   border-color: rgba(95, 108, 126, 0.24);
   background: rgba(255, 253, 249, 0.97);
   box-shadow: 0 10px 18px rgba(47, 35, 15, 0.12);
+}
+
+.toolbar-shortcut-active:hover,
+.toolbar-shortcut-active:focus-visible {
+  background: color-mix(in srgb, var(--ink) 82%, var(--paper));
 }
 
 .toolbar-shortcut:active {
@@ -2684,11 +2855,11 @@ input {
 .document-canvas {
   position: relative;
   width: min(100%, var(--a4-width));
-  min-height: auto;
+  min-height: 0;
   aspect-ratio: 210 / 297;
   margin: 0;
   border-radius: 24px;
-  overflow: hidden;
+  overflow: clip;
   background: var(--paper);
   border: 1px solid rgba(92, 108, 129, 0.14);
 }
@@ -2766,6 +2937,10 @@ input {
   cursor: crosshair;
 }
 
+.document-canvas-touch-locked .canvas-editor {
+  cursor: default;
+}
+
 .document-canvas-highlight-mode,
 .document-canvas-highlight-mode .canvas-editor,
 .document-canvas-highlight-mode .canvas-draw-layer {
@@ -2783,6 +2958,14 @@ input {
 
 .document-canvas-touch-locked {
   touch-action: none;
+}
+
+.document-canvas-hover-highlight .floating-math-block:hover,
+.document-canvas-hover-highlight .floating-math-symbol:hover,
+.document-canvas-hover-highlight .floating-text-box:hover {
+  outline: 1.5px dashed color-mix(in srgb, var(--accent) 40%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .document-canvas-drop-active {
@@ -3264,8 +3447,7 @@ input {
   display: block;
   width: 100%;
   min-width: 0;
-  height: 1.18em;
-  min-height: 0;
+  min-height: 1.4em;
   margin: 0;
   border: none;
   outline: none;
@@ -3273,13 +3455,13 @@ input {
   background: transparent;
   color: inherit;
   font: inherit;
-  line-height: 1.08;
+  line-height: 1.4;
   padding: 0 1px;
   text-align: left;
   text-decoration: inherit;
-  white-space: nowrap;
+  resize: none;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: pre;
 }
 
 .floating-text-shortcuts {
@@ -3351,9 +3533,8 @@ input {
   padding: 0 4px;
   text-align: left;
   text-decoration: inherit;
-  white-space: nowrap;
+  white-space: pre;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .floating-text-angle-prefix {

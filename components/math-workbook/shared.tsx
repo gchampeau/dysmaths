@@ -168,11 +168,15 @@ export type FloatingSymbol = {
   highlightColor: string | null;
 };
 
+export type HeaderField = "fullName" | "className" | "date";
+
 export type FloatingTextBox = {
   id: string;
   type: "textBox";
   variant?: "default" | "note";
   notation?: "plain" | "angle";
+  hidden?: boolean;
+  headerField?: HeaderField;
   text: string;
   color: string;
   fontSize: number;
@@ -488,6 +492,7 @@ export type SymbolResizeState = {
 };
 
 export const STORAGE_KEY = "maths-facile-free-layout-v1";
+export const PROFILE_STORAGE_KEY = "dysmaths-profiles-v1";
 export const WRITER_STATE_SCHEMA_VERSION = 2;
 export const FLOATING_TEXTBOX_Y_OFFSET = 10;
 export const CANVAS_QUICK_MENU_OFFSET_X = 30;
@@ -552,6 +557,90 @@ export const DEFAULT_DOCUMENT_LABELS: DefaultDocumentLabels = {
   date: "Date:"
 };
 
+export type HeaderFieldPosition = {
+  x: number;
+  y: number;
+};
+
+export type UserProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  className: string;
+  preferredSheetStyle: SheetStyle;
+  preferredMode: StudyMode;
+  showName: boolean;
+  showClass: boolean;
+  showDate: boolean;
+  highlightOnHover: boolean;
+  headerPositions?: Record<HeaderField, HeaderFieldPosition>;
+};
+
+export type ProfileStore = {
+  profiles: UserProfile[];
+  activeProfileId: string | null;
+};
+
+export function parseStoredProfiles(raw: string): ProfileStore | null {
+  try {
+    const parsed = JSON.parse(raw) as ProfileStore;
+
+    if (!Array.isArray(parsed.profiles)) {
+      return null;
+    }
+
+    const profiles = parsed.profiles
+      .filter(
+        (p) =>
+          typeof p.id === "string" &&
+          typeof p.firstName === "string" &&
+          typeof p.lastName === "string" &&
+          typeof p.className === "string" &&
+          typeof p.preferredSheetStyle === "string" &&
+          typeof p.preferredMode === "string"
+      )
+      .map((p): UserProfile => ({
+        ...p,
+        showName: typeof p.showName === "boolean" ? p.showName : true,
+        showClass: typeof p.showClass === "boolean" ? p.showClass : true,
+        showDate: typeof p.showDate === "boolean" ? p.showDate : true,
+        highlightOnHover: typeof p.highlightOnHover === "boolean" ? p.highlightOnHover : true
+      }));
+
+    return {
+      profiles,
+      activeProfileId: typeof parsed.activeProfileId === "string" ? parsed.activeProfileId : null
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function formatDateForLocale(date: Date, locale: AppLocale): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(date);
+}
+
+export function getDocumentLabelsForProfile(
+  profile: UserProfile | null,
+  defaultLabels: DefaultDocumentLabels,
+  locale: AppLocale
+): DefaultDocumentLabels {
+  if (!profile) {
+    return defaultLabels;
+  }
+
+  return {
+    title: defaultLabels.title,
+    fullName: `${profile.firstName} ${profile.lastName}`,
+    className: profile.className,
+    date: formatDateForLocale(new Date(), locale)
+  };
+}
+
 export function getDefaultSheetStyleForLocale(locale: AppLocale): SheetStyle {
   switch (locale) {
     case "fr":
@@ -578,6 +667,7 @@ export function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle, labels: Def
       id: createId("text"),
       type: "textBox",
       variant: "default",
+      headerField: "fullName" as const,
       text: labels.fullName,
       color: DEFAULT_ACTIVE_COLOR,
       fontSize,
@@ -587,12 +677,13 @@ export function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle, labels: Def
       highlightColor: null,
       x: Math.round(startX),
       y: Math.round(firstBaseline - fieldHeight + 5),
-      width: getTextBoxWidth(labels.fullName)
+      width: getTextBoxWidth(labels.fullName, fontSize)
     },
     {
       id: createId("text"),
       type: "textBox",
       variant: "default",
+      headerField: "className" as const,
       text: labels.className,
       color: DEFAULT_ACTIVE_COLOR,
       fontSize,
@@ -602,12 +693,13 @@ export function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle, labels: Def
       highlightColor: null,
       x: Math.round(startX),
       y: Math.round(secondBaseline - fieldHeight + 5),
-      width: getTextBoxWidth(labels.className)
+      width: getTextBoxWidth(labels.className, fontSize)
     },
     {
       id: createId("text"),
       type: "textBox",
       variant: "default",
+      headerField: "date" as const,
       text: labels.date,
       color: DEFAULT_ACTIVE_COLOR,
       fontSize,
@@ -617,7 +709,7 @@ export function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle, labels: Def
       highlightColor: null,
       x: Math.round(dateX),
       y: Math.round(secondBaseline - fieldHeight + 5),
-      width: getTextBoxWidth(labels.date)
+      width: getTextBoxWidth(labels.date, fontSize)
     }
   ];
 }
@@ -686,7 +778,7 @@ export const STRUCTURED_TOOL_DEFINITIONS = [
 ] as const;
 
 export const INLINE_SHORTCUT_DEFINITIONS: Array<{
-  nameKey: "essentials" | "geometry" | "highSchool";
+  nameKey: "essentials" | "geometry" | "highSchool" | "variables";
   items: Array<InlineShortcutItem & {hintKey: keyof ReturnType<typeof createWorkbookUi>["shortcutHints"]}>;
 }> = [
   {
@@ -721,6 +813,14 @@ export const INLINE_SHORTCUT_DEFINITIONS: Array<{
     items: [
       { id: "sum", label: "Σ", hintKey: "sum", hint: "", content: "Σ(k=1→n)", modes: ["highSchool"] },
       { id: "integral", label: "∫", hintKey: "integral", hint: "", content: "∫[a;b]", modes: ["highSchool"] }
+    ]
+  },
+  {
+    nameKey: "variables",
+    items: [
+      { id: "scriptX", label: "𝓍", hintKey: "scriptX", hint: "", content: "𝓍", modes: ["middleSchool", "highSchool"] },
+      { id: "scriptY", label: "𝓎", hintKey: "scriptY", hint: "", content: "𝓎", modes: ["middleSchool", "highSchool"] },
+      { id: "scriptZ", label: "𝓏", hintKey: "scriptZ", hint: "", content: "𝓏", modes: ["middleSchool", "highSchool"] }
     ]
   }
 ];
@@ -790,7 +890,10 @@ export function createWorkbookUi(t: WorkbookTranslator) {
     perpendicular: t("shortcuts.perpendicular"),
     degree: t("shortcuts.degree"),
     sum: t("shortcuts.sum"),
-    integral: t("shortcuts.integral")
+    integral: t("shortcuts.integral"),
+    scriptX: t("shortcuts.scriptX"),
+    scriptY: t("shortcuts.scriptY"),
+    scriptZ: t("shortcuts.scriptZ")
   } as const;
   const inlineShortcutGroups: InlineShortcutGroup[] = INLINE_SHORTCUT_DEFINITIONS.map((group) => ({
     name: t(`shortcutGroups.${group.nameKey}`),
@@ -920,9 +1023,30 @@ export function renderIntegralSymbolSvg(size: number) {
   );
 }
 
-export function getTextBoxWidth(text: string) {
-  const visibleText = text.trim();
-  return Math.max(36, Math.min(920, visibleText.length * 14 + 12));
+let _textMeasureCtx: CanvasRenderingContext2D | null = null;
+function getTextMeasureCtx(): CanvasRenderingContext2D | null {
+  if (typeof document === "undefined") return null;
+  if (!_textMeasureCtx) _textMeasureCtx = document.createElement("canvas").getContext("2d");
+  return _textMeasureCtx;
+}
+
+export function getTextBoxWidth(text: string, fontSizeRem = DEFAULT_CANVAS_FONT_SIZE_REM) {
+  const lines = text.split("\n");
+  const ctx = getTextMeasureCtx();
+  let maxPx = 0;
+  if (ctx) {
+    const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    ctx.font = `500 ${fontSizeRem * rootPx}px "Segoe UI", "Candara", "Trebuchet MS", sans-serif`;
+    for (const line of lines) {
+      const w = ctx.measureText(line.trim()).width;
+      if (w > maxPx) maxPx = w;
+    }
+  } else {
+    const longest = lines.reduce((a, b) => (a.length > b.length ? a : b), "");
+    maxPx = longest.trim().length * fontSizeRem * 9;
+  }
+  const min = text.trim() ? 36 : 100;
+  return Math.max(min, Math.min(920, Math.ceil(maxPx) + 12));
 }
 
 export function getSheetMetrics(sheetStyle: SheetStyle, rem: number) {

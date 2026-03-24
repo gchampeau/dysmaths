@@ -1,3 +1,5 @@
+import {useState} from "react";
+import {createPortal} from "react-dom";
 import type {DragEvent as ReactDragEvent, ReactNode, RefObject} from "react";
 import {localeLabels, type AppLocale} from "@/i18n/routing";
 import {
@@ -43,7 +45,9 @@ import {
   type SheetStyleOption,
   type SubtractionBlock,
   type StructuredTool,
+  type StudyMode,
   type StructuredToolOption,
+  type UserProfile,
   type WorkbookTranslator
 } from "@/components/math-workbook/shared";
 
@@ -67,6 +71,7 @@ type WorkbookSidebarProps = {
   selectedHighlightColor: string | null;
   openMenu: "highlight" | "settings" | "install" | null;
   selectedCount: number;
+  canFormat: boolean;
   canInstallApp: boolean;
   isInstalledApp: boolean;
   onCloseToolsPanel: () => void;
@@ -84,10 +89,16 @@ type WorkbookSidebarProps = {
   onToggleCanvasUnderline: () => void;
   onAdjustCanvasSize: (direction: "down" | "up") => void;
   onToggleMenu: (menu: "highlight" | "settings" | "install") => void;
+  onToggleHighlightTool: () => void;
   onActivateHighlightTool: (highlightColor: string) => void;
   onHeaderDelete: () => void;
   onInstallPwa: () => void;
   onLocaleChange: (locale: string) => void;
+  profiles: UserProfile[];
+  activeProfileId: string | null;
+  onProfileChange: (profileId: string | null) => void;
+  onDeleteProfile: (profileId: string) => void;
+  onSetProfileEditMode: (mode: "create" | "edit" | null) => void;
 };
 
 export function WorkbookSidebar({
@@ -110,6 +121,7 @@ export function WorkbookSidebar({
   selectedHighlightColor,
   openMenu,
   selectedCount,
+  canFormat,
   canInstallApp,
   isInstalledApp,
   onCloseToolsPanel,
@@ -127,10 +139,16 @@ export function WorkbookSidebar({
   onToggleCanvasUnderline,
   onAdjustCanvasSize,
   onToggleMenu,
+  onToggleHighlightTool,
   onActivateHighlightTool,
   onHeaderDelete,
   onInstallPwa,
-  onLocaleChange
+  onLocaleChange,
+  profiles,
+  activeProfileId,
+  onProfileChange,
+  onDeleteProfile,
+  onSetProfileEditMode
 }: WorkbookSidebarProps) {
   return (
     <>
@@ -289,19 +307,19 @@ export function WorkbookSidebar({
             </div>
 
             <div className="editor-local-toolbar-group">
-              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasBold}>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasBold}>
                 B
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasItalic}>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasItalic}>
                 I
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasUnderline}>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasUnderline}>
                 <span style={{textDecoration: "underline"}}>U</span>
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("down")}>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("down")}>
                 A-
               </button>
-              <button type="button" className="chip-button chip-button-compact" aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("up")}>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("up")}>
                 A+
               </button>
               <div className="toolbar-highlight-shell">
@@ -311,7 +329,7 @@ export function WorkbookSidebar({
                   aria-label={t("toolbar.highlighter")}
                   title={t("toolbar.highlighter")}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => onToggleMenu("highlight")}
+                  onClick={onToggleHighlightTool}
                 >
                   <span className="toolbar-highlight-marker" aria-hidden="true">
                     <span className="toolbar-highlight-marker-tip" />
@@ -321,23 +339,34 @@ export function WorkbookSidebar({
                   <span className="toolbar-highlight-caret" aria-hidden="true">▾</span>
                 </button>
 
-                {openMenu === "highlight" ? (
-                  <div className="toolbar-highlight-panel" role="menu" aria-label={t("toolbar.chooseHighlighter")}>
-                    {highlightOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`toolbar-highlight-swatch ${(option.value || null) === activeHighlightColor && advancedTool === "highlight" ? "toolbar-highlight-swatch-active" : ""}`}
-                        aria-label={option.label}
-                        title={option.label}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => onActivateHighlightTool(option.value)}
-                      >
-                        <span className="toolbar-highlight-swatch-sample" style={option.value ? {backgroundColor: option.value} : undefined} />
-                        <span className="toolbar-highlight-swatch-label">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                {openMenu === "highlight" ? createPortal(
+                  <div className="toolbar-highlight-backdrop" onMouseDown={(event) => {
+                    const x = event.clientX;
+                    const y = event.clientY;
+                    onToggleMenu("highlight");
+                    requestAnimationFrame(() => {
+                      const el = document.elementFromPoint(x, y);
+                      if (el instanceof HTMLElement) { el.click(); }
+                    });
+                  }}>
+                    <div className="toolbar-highlight-panel toolbar-highlight-portal" role="menu" aria-label={t("toolbar.chooseHighlighter")} onMouseDown={(event) => event.stopPropagation()}>
+                      {highlightOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          className={`toolbar-highlight-swatch ${(option.value || null) === activeHighlightColor && advancedTool === "highlight" ? "toolbar-highlight-swatch-active" : ""}`}
+                          aria-label={option.label}
+                          title={option.label}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => onActivateHighlightTool(option.value)}
+                        >
+                          <span className="toolbar-highlight-swatch-sample" style={option.value ? {backgroundColor: option.value} : undefined} />
+                          <span className="toolbar-highlight-swatch-label">{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>,
+                  document.body
                 ) : null}
               </div>
               <button
@@ -355,7 +384,7 @@ export function WorkbookSidebar({
             <div className="editor-local-toolbar-group toolbar-advanced-group" aria-label={t("toolbar.advancedTools")}>
               <button
                 type="button"
-                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "select" ? "sheet-tool-button-active" : ""}`}
+                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "select" ? "toolbar-shortcut-active" : ""}`}
                 title={t("toolbar.selection")}
                 aria-label={t("toolbar.selection")}
                 aria-pressed={advancedTool === "select"}
@@ -416,25 +445,55 @@ export function WorkbookSidebar({
               </div>
             ) : null}
 
-            {openMenu === "settings" ? (
-              <div className="sidebar-settings-panel" role="menu" aria-label={t("toolbar.settings")}>
-                <label className="sheet-style-picker sidebar-settings-field">
-                  <span>{t("toolbar.language")}</span>
-                  <select
-                    className="sheet-style-select"
-                    value={locale}
-                    onChange={(event) => onLocaleChange(event.target.value)}
-                    aria-label={t("toolbar.language")}
-                    data-testid="language-select"
-                  >
-                    {Object.entries(localeLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+            {openMenu === "settings" ? createPortal(
+              <div className="sidebar-settings-backdrop" onClick={() => onToggleMenu("settings")}>
+                <div className="sidebar-settings-panel sidebar-settings-portal" role="menu" aria-label={t("toolbar.settings")} onClick={(event) => event.stopPropagation()}>
+                  <label className="sheet-style-picker sidebar-settings-field">
+                    <span>{t("profile.selectProfile")}</span>
+                    <div className="sidebar-profile-row">
+                      <select
+                        className="sheet-style-select"
+                        value={activeProfileId ?? ""}
+                        onChange={(event) => onProfileChange(event.target.value || null)}
+                        aria-label={t("profile.selectProfile")}
+                      >
+                        <option value="">{t("profile.noProfile")}</option>
+                        {profiles.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.firstName} {p.lastName}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="sidebar-profile-actions">
+                        <button type="button" className="sidebar-profile-action" title={t("profile.createProfile")} onClick={() => onSetProfileEditMode("create")}>+</button>
+                        {activeProfileId ? (
+                          <>
+                            <button type="button" className="sidebar-profile-action" title={t("profile.editProfile")} onClick={() => onSetProfileEditMode("edit")}>✎</button>
+                            <button type="button" className="sidebar-profile-action" title={t("profile.deleteProfile")} onClick={() => { if (window.confirm(t("profile.deleteProfileConfirm"))) { onDeleteProfile(activeProfileId); } }}>×</button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  </label>
+                  <label className="sheet-style-picker sidebar-settings-field">
+                    <span>{t("toolbar.language")}</span>
+                    <select
+                      className="sheet-style-select"
+                      value={locale}
+                      onChange={(event) => onLocaleChange(event.target.value)}
+                      aria-label={t("toolbar.language")}
+                      data-testid="language-select"
+                    >
+                      {Object.entries(localeLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>,
+              document.body
             ) : null}
           </div>
           <p className="sidebar-credit">
@@ -471,6 +530,8 @@ type WorkbookActionBarProps = {
   isExporting: "pdf" | "png" | "print" | null;
   sheetStyle: SheetStyle;
   sheetStyleOptions: SheetStyleOption[];
+  profiles: UserProfile[];
+  activeProfileId: string | null;
   onOpenTools: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -479,6 +540,8 @@ type WorkbookActionBarProps = {
   onPrint: () => void;
   onSheetStyleChange: (sheetStyle: SheetStyle) => void;
   onResetDocument: () => void;
+  onProfileChange: (profileId: string | null) => void;
+  onSetProfileEditMode: (mode: "create" | "edit" | null) => void;
 };
 
 export function WorkbookActionBar({
@@ -496,8 +559,22 @@ export function WorkbookActionBar({
   onExportPng,
   onPrint,
   onSheetStyleChange,
-  onResetDocument
+  onResetDocument,
+  profiles,
+  activeProfileId,
+  onProfileChange,
+  onSetProfileEditMode
 }: WorkbookActionBarProps) {
+  const activeProfile = profiles.find((p) => p.id === activeProfileId);
+  const initials = activeProfile ? `${activeProfile.firstName.charAt(0)}${activeProfile.lastName.charAt(0)}`.toUpperCase() : null;
+
+  function handleSwitcherChange(value: string) {
+    if (value === "__create__") {
+      onSetProfileEditMode("create");
+    } else {
+      onProfileChange(value || null);
+    }
+  }
   return (
     <div className="sheet-action-bar">
       <div className="sheet-action-group">
@@ -546,6 +623,31 @@ export function WorkbookActionBar({
         <button type="button" className="toolbar-action ghost" onClick={onResetDocument}>
           {t("toolbar.newDocument")}
         </button>
+        <div className="profile-switcher" title={t("profile.switcherHint")}>
+          <select
+            className="profile-switcher-select"
+            value={activeProfileId ?? ""}
+            onChange={(event) => handleSwitcherChange(event.target.value)}
+            aria-label={t("profile.switcherHint")}
+          >
+            <option value="">{t("profile.noProfile")}</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.firstName} {p.lastName}
+              </option>
+            ))}
+            <option value="__create__">+ {t("profile.createProfile")}</option>
+          </select>
+          <span className={`profile-switcher-badge ${initials ? "profile-switcher-badge-active" : ""}`} aria-hidden="true">
+            {initials ?? (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Z" />
+                <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -1223,5 +1325,116 @@ export function SelectionRectOverlay({selectionRect}: SelectionRectOverlayProps)
         height: `${Math.abs(selectionRect.currentY - selectionRect.originY)}px`
       }}
     />
+  );
+}
+
+type ProfileModalProps = {
+  t: WorkbookTranslator;
+  mode: "create" | "edit" | null;
+  profile: UserProfile | null;
+  sheetStyleOptions: SheetStyleOption[];
+  onSave: (data: Omit<UserProfile, "id">) => void;
+  onClose: () => void;
+};
+
+export function ProfileModal({ t, mode, profile, sheetStyleOptions, onSave, onClose }: ProfileModalProps) {
+  const [firstName, setFirstName] = useState(profile?.firstName ?? "");
+  const [lastName, setLastName] = useState(profile?.lastName ?? "");
+  const [className, setClassName] = useState(profile?.className ?? "");
+  const [sheetStyle, setSheetStyle] = useState<SheetStyle>(profile?.preferredSheetStyle ?? "seyes");
+  const [studyMode, setStudyMode] = useState<StudyMode>(profile?.preferredMode ?? "middleSchool");
+  const [showName, setShowName] = useState(profile?.showName ?? true);
+  const [showClass, setShowClass] = useState(profile?.showClass ?? true);
+  const [showDate, setShowDate] = useState(profile?.showDate ?? true);
+  const [highlightOnHover, setHighlightOnHover] = useState(profile?.highlightOnHover ?? true);
+
+  if (!mode) {
+    return null;
+  }
+
+  function handleSubmit() {
+    if (!firstName.trim() || !lastName.trim()) {
+      return;
+    }
+
+    onSave({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      className: className.trim(),
+      preferredSheetStyle: sheetStyle,
+      preferredMode: studyMode,
+      showName,
+      showClass,
+      showDate,
+      highlightOnHover
+    });
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <section className="block-modal profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title" onClick={(event) => event.stopPropagation()}>
+        <div className="block-modal-head">
+          <div>
+            <h2 id="profile-modal-title">{mode === "create" ? t("profile.createProfile") : t("profile.editProfile")}</h2>
+          </div>
+          <div className="card-actions">
+            <button type="button" className="small-action" onClick={onClose}>
+              {t("profile.cancel")}
+            </button>
+            <button type="button" className="small-action primary-inline-action" disabled={!firstName.trim() || !lastName.trim()} onClick={handleSubmit}>
+              {t("profile.save")}
+            </button>
+          </div>
+        </div>
+        <div className="profile-modal-fields">
+          <label className="profile-modal-field">
+            <span>{t("profile.firstName")}</span>
+            <input type="text" className="profile-modal-input" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+          </label>
+          <label className="profile-modal-field">
+            <span>{t("profile.lastName")}</span>
+            <input type="text" className="profile-modal-input" value={lastName} onChange={(event) => setLastName(event.target.value)} />
+          </label>
+          <label className="profile-modal-field">
+            <span>{t("profile.className")}</span>
+            <input type="text" className="profile-modal-input" value={className} onChange={(event) => setClassName(event.target.value)} />
+          </label>
+          <label className="profile-modal-field">
+            <span>{t("profile.preferredSheetStyle")}</span>
+            <select className="sheet-style-select" value={sheetStyle} onChange={(event) => setSheetStyle(event.target.value as SheetStyle)}>
+              {sheetStyleOptions.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="profile-modal-field">
+            <span>{t("profile.preferredMode")}</span>
+            <select className="sheet-style-select" value={studyMode} onChange={(event) => setStudyMode(event.target.value as StudyMode)}>
+              <option value="middleSchool">{t("profile.middleSchool")}</option>
+              <option value="highSchool">{t("profile.highSchool")}</option>
+            </select>
+          </label>
+          <fieldset className="profile-modal-fieldset">
+            <legend>{t("profile.visibleFields")}</legend>
+            <label className="profile-modal-checkbox">
+              <input type="checkbox" checked={showName} onChange={(event) => setShowName(event.target.checked)} />
+              <span>{t("profile.showName")}</span>
+            </label>
+            <label className="profile-modal-checkbox">
+              <input type="checkbox" checked={showClass} onChange={(event) => setShowClass(event.target.checked)} />
+              <span>{t("profile.showClass")}</span>
+            </label>
+            <label className="profile-modal-checkbox">
+              <input type="checkbox" checked={showDate} onChange={(event) => setShowDate(event.target.checked)} />
+              <span>{t("profile.showDate")}</span>
+            </label>
+          </fieldset>
+          <label className="profile-modal-checkbox">
+            <input type="checkbox" checked={highlightOnHover} onChange={(event) => setHighlightOnHover(event.target.checked)} />
+            <span>{t("profile.highlightOnHover")}</span>
+          </label>
+        </div>
+      </section>
+    </div>
   );
 }

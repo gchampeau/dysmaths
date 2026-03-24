@@ -1,1 +1,2 @@
 - Take new screenshot. 
+- Add save/open file option. (xml/json ? or jpeg metadata ?) To allow user to share editable work. (Teacher to student ? )  

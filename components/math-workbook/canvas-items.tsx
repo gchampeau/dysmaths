@@ -1,7 +1,11 @@
+import {useRef} from "react";
 import type {CSSProperties as ReactCSSProperties, MouseEvent as ReactMouseEvent, ReactNode, TouchEvent as ReactTouchEvent} from "react";
 import {InteractiveMathPreview} from "@/components/math-workbook/presentational";
 import {DEFAULT_INTEGRAL_SYMBOL_SIZE, DEFAULT_SUM_SYMBOL_SIZE, renderIntegralSymbolSvg, renderShortcutGlyph, renderSumSymbolSvg} from "@/components/math-workbook/shared";
 import type {FloatingSymbol, FloatingTextBox, MathBlock, WorkbookTranslator} from "@/components/math-workbook/shared";
+
+const SCRIPT_CHARS: Record<string, string> = { x: "\u{1D4CD}", y: "\u{1D4CE}", z: "\u{1D4CF}" };
+const DOUBLE_TAP_DELAY = 400;
 
 type TextShortcutItem = {
   id: string;
@@ -196,10 +200,12 @@ export function FloatingTextBoxItem({
   onInsertShortcut
 }: FloatingTextBoxItemProps) {
   const isAngleTextBox = textBox.notation === "angle";
+  const lastKeyRef = useRef<{ key: string; time: number } | null>(null);
 
   return (
     <article
       ref={setNodeRef}
+      suppressHydrationWarning
       className={`floating-text-box ${textBox.variant === "note" ? "floating-text-box-note" : ""} ${isSelected ? "floating-text-box-selected" : ""}`}
       data-testid={`floating-text-box-${textBox.variant}`}
       style={{
@@ -248,22 +254,47 @@ export function FloatingTextBoxItem({
               </div>
               <div className={isAngleTextBox ? "floating-text-angle-prefix" : ""}>
                 {isAngleTextBox ? <span className="floating-text-angle-marker" aria-hidden="true">∠</span> : null}
-                <input
-                  type="text"
+                <textarea
                   className="floating-text-input"
                   value={textBox.text}
                   placeholder={t("canvas.writeHere")}
+                  rows={1}
+                  ref={(el) => {
+                    if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
+                  }}
                   onMouseDown={(event) => {
                     event.stopPropagation();
                     onMouseDownInput();
                   }}
                   onFocus={onFocusInput}
                   onChange={(event) => {
-                    const nextText = event.target.value;
-                    onTextChange(nextText || "");
+                    const el = event.target;
+                    el.style.height = "auto";
+                    el.style.height = `${el.scrollHeight}px`;
+                    onTextChange(el.value || "");
                   }}
                   onKeyDown={(event) => {
-                    if (event.key !== "Enter") {
+                    if (!event.repeat && event.key in SCRIPT_CHARS) {
+                      const now = Date.now();
+                      const last = lastKeyRef.current;
+                      if (last && last.key === event.key && now - last.time < DOUBLE_TAP_DELAY) {
+                        event.preventDefault();
+                        const ta = event.currentTarget;
+                        const pos = ta.selectionStart ?? ta.value.length;
+                        const scriptChar = SCRIPT_CHARS[event.key];
+                        const newValue = ta.value.slice(0, Math.max(0, pos - 1)) + scriptChar + ta.value.slice(pos);
+                        onTextChange(newValue);
+                        const newPos = Math.max(0, pos - 1) + scriptChar.length;
+                        requestAnimationFrame(() => { ta.setSelectionRange(newPos, newPos); });
+                        lastKeyRef.current = null;
+                        return;
+                      }
+                      lastKeyRef.current = { key: event.key, time: now };
+                    } else if (!(event.key in SCRIPT_CHARS)) {
+                      lastKeyRef.current = null;
+                    }
+
+                    if (event.key !== "Enter" || event.shiftKey) {
                       return;
                     }
 
