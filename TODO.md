@@ -1,2 +1,3 @@
 - Take new screenshot. 
 - Add save/open file option. (xml/json ? or jpeg metadata ?) To allow user to share editable work. (Teacher to student ? )  
+- Fix presentation on multiplication when second row contain only one digit and first row two digits
