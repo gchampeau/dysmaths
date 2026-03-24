@@ -1613,9 +1613,11 @@ export function getGeometryProtractorPaths(vertex: GeometryPointCoordinate, base
   const baselineAngle = Math.atan2(baseline.yMm - vertex.yMm, baseline.xMm - vertex.xMm);
   const delta = getGeometrySignedAngleDelta(vertex, baseline, end);
   const radius = getGeometryProtractorRadiusPx(vertex, baseline, end);
+  const measuredRadius = radius;
   const outerStart = getGeometryPolarPoint(vertex, radius, baselineAngle);
   const outerEnd = getGeometryPolarPoint(vertex, radius, baselineAngle + (delta >= 0 ? Math.PI : -Math.PI));
-  const arcEnd = getGeometryPolarPoint(vertex, radius, baselineAngle + delta);
+  const arcStart = getGeometryPolarPoint(vertex, measuredRadius, baselineAngle);
+  const arcEnd = getGeometryPolarPoint(vertex, measuredRadius, baselineAngle + delta);
   const largeArcFlag = Math.abs(delta) > Math.PI ? 1 : 0;
   const sweepFlag = delta >= 0 ? 1 : 0;
   const semiSweepFlag = delta >= 0 ? 1 : 0;
@@ -1626,7 +1628,7 @@ export function getGeometryProtractorPaths(vertex: GeometryPointCoordinate, base
     radius,
     baselineAngle,
     protractorPath: `M ${centerX} ${centerY} L ${outerStart.x} ${outerStart.y} A ${radius} ${radius} 0 0 ${semiSweepFlag} ${outerEnd.x} ${outerEnd.y} Z`,
-    measuredArcPath: `M ${getGeometryPolarPoint(vertex, radius - 8, baselineAngle).x} ${getGeometryPolarPoint(vertex, radius - 8, baselineAngle).y} A ${radius - 8} ${radius - 8} 0 ${largeArcFlag} ${sweepFlag} ${arcEnd.x} ${arcEnd.y}`
+    measuredArcPath: `M ${arcStart.x} ${arcStart.y} A ${measuredRadius} ${measuredRadius} 0 ${largeArcFlag} ${sweepFlag} ${arcEnd.x} ${arcEnd.y}`
   };
 }
 
