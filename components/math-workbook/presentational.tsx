@@ -497,23 +497,32 @@ export function WorkbookSidebar({
                       <button type="button" className="sidebar-profile-action" title={t("profile.createProfile")} onClick={() => onSetProfileEditMode("create")}>+</button>
                     </div>
                     <ul className="sidebar-profile-list">
-                      <li className={`sidebar-profile-item ${activeProfileId === null ? "sidebar-profile-item-active" : ""}`}>
+                      <li
+                        className={`sidebar-profile-item ${activeProfileId === null ? "sidebar-profile-item-active" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onProfileChange(null)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onProfileChange(null); }}
+                      >
+                        <span className="profile-switcher-badge" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Z"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        </span>
                         <span className="sidebar-profile-item-name">{t("profile.anonymous")}</span>
-                        {activeProfileId !== null ? (
-                          <button type="button" className="sidebar-profile-activate" onClick={() => onProfileChange(null)}>{t("profile.activateProfile")}</button>
-                        ) : (
-                          <span className="sidebar-profile-active-badge">✓</span>
-                        )}
                       </li>
                       {profiles.map((p) => (
-                        <li key={p.id} className={`sidebar-profile-item ${p.id === activeProfileId ? "sidebar-profile-item-active" : ""}`}>
+                        <li
+                          key={p.id}
+                          className={`sidebar-profile-item ${p.id === activeProfileId ? "sidebar-profile-item-active" : ""}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onProfileChange(p.id)}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onProfileChange(p.id); }}
+                        >
+                          <span className={`profile-switcher-badge ${p.id === activeProfileId ? "profile-switcher-badge-active" : ""}`} aria-hidden="true">
+                            {`${p.firstName.charAt(0)}${p.lastName.charAt(0)}`.toUpperCase()}
+                          </span>
                           <span className="sidebar-profile-item-name">{p.firstName} {p.lastName}</span>
-                          <div className="sidebar-profile-item-actions">
-                            {p.id !== activeProfileId ? (
-                              <button type="button" className="sidebar-profile-activate" onClick={() => onProfileChange(p.id)}>{t("profile.activateProfile")}</button>
-                            ) : (
-                              <span className="sidebar-profile-active-badge">✓</span>
-                            )}
+                          <div className="sidebar-profile-item-actions" onClick={(e) => e.stopPropagation()}>
                             <button type="button" className="sidebar-profile-action" title={t("profile.editProfile")} onClick={() => { onProfileChange(p.id); onSetProfileEditMode("edit"); }}>✎</button>
                             <button type="button" className="sidebar-profile-action" title={t("profile.deleteProfile")} onClick={() => { if (window.confirm(t("profile.deleteProfileConfirm"))) { onDeleteProfile(p.id); } }}>
                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -528,7 +537,8 @@ export function WorkbookSidebar({
                       ))}
                     </ul>
                   </div>
-                  <label className="sheet-style-picker sidebar-settings-field">
+                  <hr className="sidebar-settings-divider" />
+                  <label className="sidebar-settings-field-inline">
                     <span>{t("toolbar.language")}</span>
                     <select
                       className="sheet-style-select"

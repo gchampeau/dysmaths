@@ -275,7 +275,7 @@ button {
   left: 0;
   bottom: calc(100% + 0.55rem);
   z-index: 20;
-  min-width: 13rem;
+  min-width: 17rem;
   padding: 0.78rem;
   border: 1px solid rgba(92, 108, 129, 0.14);
   border-radius: 18px;
@@ -294,6 +294,22 @@ button {
 
 .sidebar-settings-field {
   justify-items: stretch;
+}
+
+.sidebar-settings-divider {
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, white);
+  margin: 0.4rem 0;
+}
+
+.sidebar-settings-field-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .sidebar-settings-copy {
@@ -327,11 +343,24 @@ button {
   border-radius: 8px;
   border: 1px solid rgba(92, 108, 129, 0.1);
   background: rgba(255, 252, 247, 0.6);
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.sidebar-profile-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(92, 108, 129, 0.2);
 }
 
 .sidebar-profile-item-active {
-  background: color-mix(in srgb, var(--accent) 8%, white);
-  border-color: color-mix(in srgb, var(--accent) 20%, white);
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  border-color: color-mix(in srgb, var(--accent) 40%, white);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.sidebar-profile-item-active .sidebar-profile-item-name {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent) 80%, var(--ink));
 }
 
 .sidebar-profile-item-name {
@@ -350,28 +379,6 @@ button {
   flex-shrink: 0;
 }
 
-.sidebar-profile-active-badge {
-  font-size: 0.8rem;
-  color: var(--accent);
-  font-weight: 800;
-  padding: 0 0.2rem;
-}
-
-.sidebar-profile-activate {
-  font-size: 0.75rem;
-  padding: 0.15rem 0.45rem;
-  border: 1px solid rgba(92, 108, 129, 0.2);
-  border-radius: 6px;
-  background: rgba(255, 252, 247, 0.94);
-  color: var(--ink);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.sidebar-profile-activate:hover {
-  border-color: color-mix(in srgb, var(--accent) 30%, white);
-  background: rgba(255, 255, 255, 0.96);
-}
 
 .sidebar-profile-action {
   min-width: 2rem;
