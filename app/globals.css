@@ -303,16 +303,74 @@ button {
   line-height: 1.45;
 }
 
-.sidebar-profile-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.35rem;
+.sidebar-profile-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 0.35rem;
 }
 
-.sidebar-profile-actions {
+.sidebar-profile-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar-profile-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(92, 108, 129, 0.1);
+  background: rgba(255, 252, 247, 0.6);
+}
+
+.sidebar-profile-item-active {
+  background: color-mix(in srgb, var(--accent) 8%, white);
+  border-color: color-mix(in srgb, var(--accent) 20%, white);
+}
+
+.sidebar-profile-item-name {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-profile-item-actions {
   display: flex;
   gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.sidebar-profile-active-badge {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 800;
+  padding: 0 0.2rem;
+}
+
+.sidebar-profile-activate {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid rgba(92, 108, 129, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 252, 247, 0.94);
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sidebar-profile-activate:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, white);
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .sidebar-profile-action {
@@ -495,6 +553,7 @@ button {
 
 .sidebar-block-label {
   margin: 0;
+  width: 100%;
   color: color-mix(in srgb, var(--ink) 74%, var(--paper));
   font-size: 0.78rem;
   font-weight: 800;
@@ -540,16 +599,48 @@ button {
 }
 
 .toolbar-row-format {
-  order: -1;
-  padding: 0.58rem 0.62rem 0.66rem;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--line) 74%, white);
-  background:
-    linear-gradient(180deg, rgba(255, 253, 249, 0.9) 0%, rgba(246, 248, 241, 0.76) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.56),
-    0 8px 18px rgba(36, 51, 66, 0.06);
   align-content: start;
+}
+
+.toolbar-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.toolbar-color-icon {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--ink) 60%, var(--paper));
+}
+
+.toolbar-color-icon-letter {
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.toolbar-color-icon-bar {
+  display: block;
+  width: 1rem;
+  height: 3px;
+  border-radius: 2px;
+  margin-top: 1px;
+}
+
+.color-chip-none {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--ink) 50%, var(--paper));
+  background: rgba(255, 252, 247, 0.9);
+  border: 1px dashed rgba(92, 108, 129, 0.3);
 }
 
 .toolbar-row-format .chip-button {
@@ -3596,8 +3687,16 @@ input {
 }
 
 .canvas-text-format-menu {
-  grid-template-columns: repeat(5, max-content);
-  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 8px 10px;
+}
+
+.canvas-format-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .canvas-geometry-settings-menu {
@@ -3653,6 +3752,27 @@ input {
 .canvas-text-highlight-chip-active {
   border-color: rgba(31, 45, 61, 0.35);
   box-shadow: inset 0 0 0 1px rgba(31, 45, 61, 0.08);
+}
+
+.canvas-text-color-chip {
+  display: grid;
+  place-items: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.2rem;
+}
+
+.canvas-text-color-chip-active {
+  border-color: rgba(31, 45, 61, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(31, 45, 61, 0.08);
+}
+
+.canvas-text-color-sample {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(31, 45, 61, 0.1);
 }
 
 .align-grid-icon {

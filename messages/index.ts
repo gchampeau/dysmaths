@@ -31,6 +31,9 @@ type Messages = {
       highSchoolTools: string;
       highSchoolShortcuts: string;
       formatting: string;
+      textColor: string;
+      backgroundColor: string;
+      noBackground: string;
       bold: string;
       italic: string;
       underline: string;
@@ -134,6 +137,8 @@ type Messages = {
     profile: {
       selectProfile: string;
       noProfile: string;
+      anonymous: string;
+      activateProfile: string;
       createProfile: string;
       editProfile: string;
       deleteProfile: string;
@@ -250,6 +255,9 @@ const en: Messages = {
       highSchoolTools: "High school tools",
       highSchoolShortcuts: "High school shortcuts",
       formatting: "Formatting",
+      textColor: "Text color",
+      backgroundColor: "Background color",
+      noBackground: "No background",
       bold: "Bold",
       italic: "Italic",
       underline: "Underline",
@@ -362,6 +370,8 @@ const en: Messages = {
     profile: {
       selectProfile: "Profile",
       noProfile: "No profile",
+      anonymous: "Anonymous",
+      activateProfile: "Activate",
       createProfile: "New profile",
       editProfile: "Edit",
       deleteProfile: "Delete",
@@ -478,6 +488,9 @@ const fr: Messages = {
       highSchoolTools: "Outils lycée",
       highSchoolShortcuts: "Raccourcis lycée",
       formatting: "Mise en forme",
+      textColor: "Couleur du texte",
+      backgroundColor: "Couleur de fond",
+      noBackground: "Sans fond",
       bold: "Gras",
       italic: "Italique",
       underline: "Souligné",
@@ -590,6 +603,8 @@ const fr: Messages = {
     profile: {
       selectProfile: "Profil",
       noProfile: "Aucun profil",
+      anonymous: "Anonyme",
+      activateProfile: "Activer",
       createProfile: "Nouveau profil",
       editProfile: "Modifier",
       deleteProfile: "Supprimer",
@@ -706,6 +721,9 @@ const es: Messages = {
       highSchoolTools: "Herramientas de bachillerato",
       highSchoolShortcuts: "Atajos de bachillerato",
       formatting: "Formato",
+      textColor: "Color del texto",
+      backgroundColor: "Color de fondo",
+      noBackground: "Sin fondo",
       bold: "Negrita",
       italic: "Cursiva",
       underline: "Subrayado",
@@ -818,6 +836,8 @@ const es: Messages = {
     profile: {
       selectProfile: "Perfil",
       noProfile: "Sin perfil",
+      anonymous: "Anónimo",
+      activateProfile: "Activar",
       createProfile: "Nuevo perfil",
       editProfile: "Editar",
       deleteProfile: "Eliminar",

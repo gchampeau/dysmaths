@@ -5118,6 +5118,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         onToggleAdvancedToolMode={toggleAdvancedToolMode}
         shouldIgnoreToolbarClick={shouldIgnoreToolbarClick}
         onApplyActiveColor={applyActiveColor}
+        onApplyActiveHighlightColor={applyCanvasHighlight}
         onToggleCanvasBold={toggleCanvasBold}
         onToggleCanvasItalic={toggleCanvasItalic}
         onToggleCanvasUnderline={toggleCanvasUnderline}
@@ -5576,9 +5577,12 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               t={t}
               menuRef={selectedTextBoxMenuRef}
               position={selectedTextBoxMenuPosition}
+              colorOptions={workbookUi.colorOptions}
+              activeColor={state.activeColor}
               highlightOptions={workbookUi.highlightOptions}
               selectedHighlightColor={selectedHighlightColor}
               onClose={clearFloatingSelection}
+              onApplyColor={applyActiveColor}
               onBold={toggleCanvasBold}
               onItalic={toggleCanvasItalic}
               onUnderline={toggleCanvasUnderline}

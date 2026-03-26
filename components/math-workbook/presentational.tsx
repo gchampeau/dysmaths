@@ -84,6 +84,7 @@ type WorkbookSidebarProps = {
   onToggleAdvancedToolMode: (tool: AdvancedTool) => void;
   shouldIgnoreToolbarClick: () => boolean;
   onApplyActiveColor: (color: string) => void;
+  onApplyActiveHighlightColor: (color: string) => void;
   onToggleCanvasBold: () => void;
   onToggleCanvasItalic: () => void;
   onToggleCanvasUnderline: () => void;
@@ -134,6 +135,7 @@ export function WorkbookSidebar({
   onToggleAdvancedToolMode,
   shouldIgnoreToolbarClick,
   onApplyActiveColor,
+  onApplyActiveHighlightColor,
   onToggleCanvasBold,
   onToggleCanvasItalic,
   onToggleCanvasUnderline,
@@ -156,6 +158,156 @@ export function WorkbookSidebar({
 
       <header className={`top-toolbar ${isToolsPanelOpen ? "top-toolbar-open" : ""}`}>
         <div className="top-toolbar-inner">
+
+
+          <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact" aria-label={t("toolbar.tools")}>
+            <p className="sidebar-block-label">{t("toolbar.tools")}</p>
+            <div className="editor-local-toolbar-group toolbar-advanced-group">
+              <button
+                type="button"
+                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "select" ? "toolbar-shortcut-active" : ""}`}
+                title={t("toolbar.selection")}
+                aria-label={t("toolbar.selection")}
+                aria-pressed={advancedTool === "select"}
+                onClick={() => onToggleAdvancedToolMode("select")}
+              >
+                <span className="selection-icon" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "draw" ? "toolbar-shortcut-active" : ""}`}
+                title={t("toolbar.freehand")}
+                aria-label={t("toolbar.freehand")}
+                aria-pressed={advancedTool === "draw"}
+                onClick={() => onToggleAdvancedToolMode("draw")}
+              >
+                ✎
+              </button>
+              <div className="toolbar-highlight-shell">
+                <button
+                  type="button"
+                  className={`chip-button toolbar-highlight-button ${openMenu === "highlight" || advancedTool === "highlight" ? "toolbar-highlight-button-active" : ""}`}
+                  aria-label={t("toolbar.highlighter")}
+                  title={t("toolbar.highlighter")}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={onToggleHighlightTool}
+                >
+                  <span className="toolbar-highlight-marker" aria-hidden="true">
+                    <span className="toolbar-highlight-marker-tip" />
+                    <span className="toolbar-highlight-marker-body" />
+                    <span className="toolbar-highlight-marker-line" style={{backgroundColor: selectedHighlightColor ?? DEFAULT_HIGHLIGHT_TOOL_COLOR}} />
+                  </span>
+                  <span className="toolbar-highlight-caret" aria-hidden="true">▾</span>
+                </button>
+
+                {openMenu === "highlight" ? createPortal(
+                  <div className="toolbar-highlight-backdrop" onMouseDown={(event) => {
+                    const x = event.clientX;
+                    const y = event.clientY;
+                    onToggleMenu("highlight");
+                    requestAnimationFrame(() => {
+                      const el = document.elementFromPoint(x, y);
+                      if (el instanceof HTMLElement) { el.click(); }
+                    });
+                  }}>
+                    <div className="toolbar-highlight-panel toolbar-highlight-portal" role="menu" aria-label={t("toolbar.chooseHighlighter")} onMouseDown={(event) => event.stopPropagation()}>
+                      {highlightOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          className={`toolbar-highlight-swatch ${(option.value || null) === activeHighlightColor && advancedTool === "highlight" ? "toolbar-highlight-swatch-active" : ""}`}
+                          aria-label={option.label}
+                          title={option.label}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => onActivateHighlightTool(option.value)}
+                        >
+                          <span className="toolbar-highlight-swatch-sample" style={option.value ? {backgroundColor: option.value} : undefined} />
+                          <span className="toolbar-highlight-swatch-label">{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>,
+                  document.body
+                ) : null}
+              </div>
+              {selectedCount > 0 ? (
+                <button type="button" className="toolbar-shortcut toolbar-shortcut-symbol" title={t("toolbar.delete")} onClick={onHeaderDelete}>
+                  ×
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="toolbar-row toolbar-row-secondary toolbar-row-format sidebar-block sidebar-block-compact" aria-label={t("toolbar.formatting")}>
+            <p className="sidebar-block-label">{t("toolbar.formatting")}</p>
+
+            <div className="toolbar-color-row">
+              <span className="toolbar-color-icon" title={t("toolbar.textColor")} aria-label={t("toolbar.textColor")}>
+                <span className="toolbar-color-icon-letter" aria-hidden="true">A</span>
+                <span className="toolbar-color-icon-bar" style={{backgroundColor: activeColor}} aria-hidden="true" />
+              </span>
+              {colorOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`color-chip ${activeColor === option.value ? "color-chip-active" : ""}`}
+                  style={{backgroundColor: option.value, color: option.value}}
+                  aria-label={option.label}
+                  title={option.label}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onApplyActiveColor(option.value)}
+                />
+              ))}
+            </div>
+
+            <div className="toolbar-color-row">
+              <span className="toolbar-color-icon" title={t("toolbar.backgroundColor")} aria-label={t("toolbar.backgroundColor")}>
+                <svg viewBox="0 0 16 14" width="16" height="14" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
+                  <rect x="1" y="1" width="14" height="12" rx="2" />
+                  <rect x="3" y="3" width="10" height="8" rx="1" fill={activeHighlightColor ?? "none"} stroke={activeHighlightColor ? "none" : "currentColor"} strokeWidth="0.8" strokeDasharray="2 1.2" />
+                </svg>
+              </span>
+              <button
+                type="button"
+                className={`color-chip color-chip-none ${activeHighlightColor === null ? "color-chip-active" : ""}`}
+                title={t("toolbar.noBackground")}
+                aria-label={t("toolbar.noBackground")}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onApplyActiveHighlightColor("")}
+              >∅</button>
+              {highlightOptions.filter((o) => o.value).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`color-chip ${activeHighlightColor === option.value ? "color-chip-active" : ""}`}
+                  style={{backgroundColor: option.value, color: option.value}}
+                  aria-label={option.label}
+                  title={option.label}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onApplyActiveHighlightColor(option.value)}
+                />
+              ))}
+            </div>
+
+            <div className="toolbar-color-row">
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasBold}>
+                B
+              </button>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasItalic}>
+                I
+              </button>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasUnderline}>
+                <span style={{textDecoration: "underline"}}>U</span>
+              </button>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("down")}>
+                A-
+              </button>
+              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("up")}>
+                A+
+              </button>
+            </div>
+          </div>
+
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
             <p className="sidebar-block-label">{t("toolbar.geometry")}</p>
             <div className="toolbar-shortcut-group toolbar-shortcut-group-symbols" aria-label={t("toolbar.geometryGroup")}>
@@ -289,116 +441,7 @@ export function WorkbookSidebar({
             </div>
           </div>
 
-          <div className="toolbar-row toolbar-row-format sidebar-block sidebar-block-compact" aria-label={t("toolbar.formatting")}>
-            <p className="sidebar-block-label">{t("toolbar.formatting")}</p>
-            <div className="editor-local-toolbar-group">
-              {colorOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`color-chip ${activeColor === option.value ? "color-chip-active" : ""}`}
-                  style={{backgroundColor: option.value, color: option.value}}
-                  aria-label={option.label}
-                  title={option.label}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => onApplyActiveColor(option.value)}
-                />
-              ))}
-            </div>
 
-            <div className="editor-local-toolbar-group">
-              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasBold}>
-                B
-              </button>
-              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasItalic}>
-                I
-              </button>
-              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onMouseDown={(event) => event.preventDefault()} onClick={onToggleCanvasUnderline}>
-                <span style={{textDecoration: "underline"}}>U</span>
-              </button>
-              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("down")}>
-                A-
-              </button>
-              <button type="button" className="chip-button chip-button-compact" disabled={!canFormat} aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onMouseDown={(event) => event.preventDefault()} onClick={() => onAdjustCanvasSize("up")}>
-                A+
-              </button>
-              <div className="toolbar-highlight-shell">
-                <button
-                  type="button"
-                  className={`chip-button toolbar-highlight-button ${openMenu === "highlight" || advancedTool === "highlight" ? "toolbar-highlight-button-active" : ""}`}
-                  aria-label={t("toolbar.highlighter")}
-                  title={t("toolbar.highlighter")}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={onToggleHighlightTool}
-                >
-                  <span className="toolbar-highlight-marker" aria-hidden="true">
-                    <span className="toolbar-highlight-marker-tip" />
-                    <span className="toolbar-highlight-marker-body" />
-                    <span className="toolbar-highlight-marker-line" style={{backgroundColor: selectedHighlightColor ?? DEFAULT_HIGHLIGHT_TOOL_COLOR}} />
-                  </span>
-                  <span className="toolbar-highlight-caret" aria-hidden="true">▾</span>
-                </button>
-
-                {openMenu === "highlight" ? createPortal(
-                  <div className="toolbar-highlight-backdrop" onMouseDown={(event) => {
-                    const x = event.clientX;
-                    const y = event.clientY;
-                    onToggleMenu("highlight");
-                    requestAnimationFrame(() => {
-                      const el = document.elementFromPoint(x, y);
-                      if (el instanceof HTMLElement) { el.click(); }
-                    });
-                  }}>
-                    <div className="toolbar-highlight-panel toolbar-highlight-portal" role="menu" aria-label={t("toolbar.chooseHighlighter")} onMouseDown={(event) => event.stopPropagation()}>
-                      {highlightOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          type="button"
-                          className={`toolbar-highlight-swatch ${(option.value || null) === activeHighlightColor && advancedTool === "highlight" ? "toolbar-highlight-swatch-active" : ""}`}
-                          aria-label={option.label}
-                          title={option.label}
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => onActivateHighlightTool(option.value)}
-                        >
-                          <span className="toolbar-highlight-swatch-sample" style={option.value ? {backgroundColor: option.value} : undefined} />
-                          <span className="toolbar-highlight-swatch-label">{option.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>,
-                  document.body
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "draw" ? "toolbar-shortcut-active" : ""}`}
-                title={t("toolbar.freehand")}
-                aria-label={t("toolbar.freehand")}
-                aria-pressed={advancedTool === "draw"}
-                onClick={() => onToggleAdvancedToolMode("draw")}
-              >
-                ✎
-              </button>
-            </div>
-
-            <div className="editor-local-toolbar-group toolbar-advanced-group" aria-label={t("toolbar.advancedTools")}>
-              <button
-                type="button"
-                className={`toolbar-shortcut toolbar-shortcut-symbol ${advancedTool === "select" ? "toolbar-shortcut-active" : ""}`}
-                title={t("toolbar.selection")}
-                aria-label={t("toolbar.selection")}
-                aria-pressed={advancedTool === "select"}
-                onClick={() => onToggleAdvancedToolMode("select")}
-              >
-                <span className="selection-icon" aria-hidden="true" />
-              </button>
-              {selectedCount > 0 ? (
-                <button type="button" className="toolbar-shortcut toolbar-shortcut-symbol" title={t("toolbar.delete")} onClick={onHeaderDelete}>
-                  ×
-                </button>
-              ) : null}
-            </div>
-          </div>
         </div>
 
         <footer className="sidebar-footer">
@@ -448,33 +491,43 @@ export function WorkbookSidebar({
             {openMenu === "settings" ? createPortal(
               <div className="sidebar-settings-backdrop" onClick={() => onToggleMenu("settings")}>
                 <div className="sidebar-settings-panel sidebar-settings-portal" role="menu" aria-label={t("toolbar.settings")} onClick={(event) => event.stopPropagation()}>
-                  <label className="sheet-style-picker sidebar-settings-field">
-                    <span>{t("profile.selectProfile")}</span>
-                    <div className="sidebar-profile-row">
-                      <select
-                        className="sheet-style-select"
-                        value={activeProfileId ?? ""}
-                        onChange={(event) => onProfileChange(event.target.value || null)}
-                        aria-label={t("profile.selectProfile")}
-                      >
-                        <option value="">{t("profile.noProfile")}</option>
-                        {profiles.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.firstName} {p.lastName}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="sidebar-profile-actions">
-                        <button type="button" className="sidebar-profile-action" title={t("profile.createProfile")} onClick={() => onSetProfileEditMode("create")}>+</button>
-                        {activeProfileId ? (
-                          <>
-                            <button type="button" className="sidebar-profile-action" title={t("profile.editProfile")} onClick={() => onSetProfileEditMode("edit")}>✎</button>
-                            <button type="button" className="sidebar-profile-action" title={t("profile.deleteProfile")} onClick={() => { if (window.confirm(t("profile.deleteProfileConfirm"))) { onDeleteProfile(activeProfileId); } }}>×</button>
-                          </>
-                        ) : null}
-                      </div>
+                  <div className="sidebar-settings-field">
+                    <div className="sidebar-profile-header">
+                      <span>{t("profile.selectProfile")}</span>
+                      <button type="button" className="sidebar-profile-action" title={t("profile.createProfile")} onClick={() => onSetProfileEditMode("create")}>+</button>
                     </div>
-                  </label>
+                    <ul className="sidebar-profile-list">
+                      <li className={`sidebar-profile-item ${activeProfileId === null ? "sidebar-profile-item-active" : ""}`}>
+                        <span className="sidebar-profile-item-name">{t("profile.anonymous")}</span>
+                        {activeProfileId !== null ? (
+                          <button type="button" className="sidebar-profile-activate" onClick={() => onProfileChange(null)}>{t("profile.activateProfile")}</button>
+                        ) : (
+                          <span className="sidebar-profile-active-badge">✓</span>
+                        )}
+                      </li>
+                      {profiles.map((p) => (
+                        <li key={p.id} className={`sidebar-profile-item ${p.id === activeProfileId ? "sidebar-profile-item-active" : ""}`}>
+                          <span className="sidebar-profile-item-name">{p.firstName} {p.lastName}</span>
+                          <div className="sidebar-profile-item-actions">
+                            {p.id !== activeProfileId ? (
+                              <button type="button" className="sidebar-profile-activate" onClick={() => onProfileChange(p.id)}>{t("profile.activateProfile")}</button>
+                            ) : (
+                              <span className="sidebar-profile-active-badge">✓</span>
+                            )}
+                            <button type="button" className="sidebar-profile-action" title={t("profile.editProfile")} onClick={() => { onProfileChange(p.id); onSetProfileEditMode("edit"); }}>✎</button>
+                            <button type="button" className="sidebar-profile-action" title={t("profile.deleteProfile")} onClick={() => { if (window.confirm(t("profile.deleteProfileConfirm"))) { onDeleteProfile(p.id); } }}>
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6l-1 14H6L5 6" />
+                                <path d="M10 11v6M14 11v6" />
+                                <path d="M9 6V4h6v2" />
+                              </svg>
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                   <label className="sheet-style-picker sidebar-settings-field">
                     <span>{t("toolbar.language")}</span>
                     <select
@@ -1197,9 +1250,12 @@ type TextFormatMenuProps = {
   t: WorkbookTranslator;
   menuRef: ((node: HTMLDivElement | null) => void) | RefObject<HTMLDivElement | null>;
   position: {x: number; y: number; placement: "above" | "below"} | null;
+  colorOptions: Array<{ id: string; label: string; value: string }>;
+  activeColor: string;
   highlightOptions: HighlightOption[];
   selectedHighlightColor: string | null;
   onClose: () => void;
+  onApplyColor: (color: string) => void;
   onBold: () => void;
   onItalic: () => void;
   onUnderline: () => void;
@@ -1211,9 +1267,12 @@ export function TextFormatMenu({
   t,
   menuRef,
   position,
+  colorOptions,
+  activeColor,
   highlightOptions,
   selectedHighlightColor,
   onClose,
+  onApplyColor,
   onBold,
   onItalic,
   onUnderline,
@@ -1232,36 +1291,73 @@ export function TextFormatMenu({
       data-placement={position.placement}
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <button type="button" className="canvas-quick-close" aria-label={t("canvas.closeMenu")} title={t("canvas.closeMenu")} onClick={onClose}>
-        ×
-      </button>
-      <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onClick={onBold}>
-        B
-      </button>
-      <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onClick={onItalic}>
-        I
-      </button>
-      <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onClick={onUnderline}>
-        <span style={{textDecoration: "underline"}}>U</span>
-      </button>
-      <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onClick={() => onSizeChange("down")}>
-        A-
-      </button>
-      <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onClick={() => onSizeChange("up")}>
-        A+
-      </button>
-      {highlightOptions.filter((option) => option.value).map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          className={`canvas-quick-action canvas-text-highlight-chip ${(option.value || null) === selectedHighlightColor ? "canvas-text-highlight-chip-active" : ""}`}
-          aria-label={t("canvas.highlightColor", {color: option.label})}
-          title={t("canvas.highlightColor", {color: option.label})}
-          onClick={() => onHighlight((option.value || null) === selectedHighlightColor ? "" : option.value)}
-        >
-          <span className="canvas-text-highlight-sample" style={{backgroundColor: option.value}} />
+      <div className="canvas-format-row">
+        <span className="toolbar-color-icon" title={t("toolbar.textColor")} aria-label={t("toolbar.textColor")}>
+          <span className="toolbar-color-icon-letter" aria-hidden="true">A</span>
+          <span className="toolbar-color-icon-bar" style={{backgroundColor: activeColor}} aria-hidden="true" />
+        </span>
+        {colorOptions.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={`canvas-quick-action canvas-text-color-chip ${activeColor === option.value ? "canvas-text-color-chip-active" : ""}`}
+            aria-label={option.label}
+            title={option.label}
+            onClick={() => onApplyColor(option.value)}
+          >
+            <span className="canvas-text-color-sample" style={{backgroundColor: option.value}} />
+          </button>
+        ))}
+        <button type="button" className="canvas-quick-close" aria-label={t("canvas.closeMenu")} title={t("canvas.closeMenu")} onClick={onClose}>
+          ×
         </button>
-      ))}
+      </div>
+
+      <div className="canvas-format-row">
+        <span className="toolbar-color-icon" title={t("toolbar.backgroundColor")} aria-label={t("toolbar.backgroundColor")}>
+          <svg viewBox="0 0 16 14" width="16" height="14" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
+            <rect x="1" y="1" width="14" height="12" rx="2" />
+            <rect x="3" y="3" width="10" height="8" rx="1" fill={selectedHighlightColor ?? "none"} stroke={selectedHighlightColor ? "none" : "currentColor"} strokeWidth="0.8" strokeDasharray="2 1.2" />
+          </svg>
+        </span>
+        <button
+          type="button"
+          className={`canvas-quick-action canvas-text-highlight-chip ${!selectedHighlightColor ? "canvas-text-highlight-chip-active" : ""}`}
+          title={t("toolbar.noBackground")}
+          aria-label={t("toolbar.noBackground")}
+          onClick={() => onHighlight("")}
+        >∅</button>
+        {highlightOptions.filter((option) => option.value).map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={`canvas-quick-action canvas-text-highlight-chip ${(option.value || null) === selectedHighlightColor ? "canvas-text-highlight-chip-active" : ""}`}
+            aria-label={t("canvas.highlightColor", {color: option.label})}
+            title={t("canvas.highlightColor", {color: option.label})}
+            onClick={() => onHighlight((option.value || null) === selectedHighlightColor ? "" : option.value)}
+          >
+            <span className="canvas-text-highlight-sample" style={{backgroundColor: option.value}} />
+          </button>
+        ))}
+      </div>
+
+      <div className="canvas-format-row">
+        <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.bold")} title={t("toolbar.bold")} onClick={onBold}>
+          B
+        </button>
+        <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.italic")} title={t("toolbar.italic")} onClick={onItalic}>
+          I
+        </button>
+        <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.underline")} title={t("toolbar.underline")} onClick={onUnderline}>
+          <span style={{textDecoration: "underline"}}>U</span>
+        </button>
+        <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.decrease")} title={t("toolbar.decrease")} onClick={() => onSizeChange("down")}>
+          A-
+        </button>
+        <button type="button" className="canvas-quick-action canvas-text-format-action" aria-label={t("toolbar.increase")} title={t("toolbar.increase")} onClick={() => onSizeChange("up")}>
+          A+
+        </button>
+      </div>
     </div>
   );
 }
