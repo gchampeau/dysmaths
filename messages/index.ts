@@ -32,6 +32,9 @@ type Messages = {
       highSchoolShortcuts: string;
       formatting: string;
       defaultStyle: string;
+      pencilColor: string;
+      text: string;
+      stylePreview: string;
       scriptLetters: string;
       textColor: string;
       backgroundColor: string;
@@ -258,6 +261,9 @@ const en: Messages = {
       highSchoolShortcuts: "High school shortcuts",
       formatting: "Formatting",
       defaultStyle: "Default style",
+      pencilColor: "Pencil color",
+      text: "Text",
+      stylePreview: "Style preview",
       scriptLetters: "Script letters",
       textColor: "Text color",
       backgroundColor: "Background color",
@@ -493,6 +499,9 @@ const fr: Messages = {
       highSchoolShortcuts: "Raccourcis lycée",
       formatting: "Mise en forme",
       defaultStyle: "Style par défaut",
+      pencilColor: "Couleur du crayon",
+      text: "Texte",
+      stylePreview: "Aperçu du style",
       scriptLetters: "Lettres cursives",
       textColor: "Couleur du texte",
       backgroundColor: "Couleur de fond",
@@ -728,6 +737,9 @@ const es: Messages = {
       highSchoolShortcuts: "Atajos de bachillerato",
       formatting: "Formato",
       defaultStyle: "Estilo por defecto",
+      pencilColor: "Color del lapiz",
+      text: "Texto",
+      stylePreview: "Vista previa del estilo",
       scriptLetters: "Letras cursivas",
       textColor: "Color del texto",
       backgroundColor: "Color de fondo",

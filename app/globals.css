@@ -626,13 +626,15 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.08rem;
   width: 1.5rem;
+  height: 1.5rem;
   flex-shrink: 0;
   color: color-mix(in srgb, var(--ink) 60%, var(--paper));
 }
 
 .toolbar-color-icon-letter {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -660,33 +662,56 @@ button {
 .toolbar-row-format .canvas-quick-action {
   min-width: 1.67rem;
   min-height: 1.67rem;
-  padding: 0.15rem;
+  padding: 0;
   border-radius: 999px;
 }
 
 .toolbar-row-format .canvas-text-color-sample,
 .toolbar-row-format .canvas-text-highlight-sample {
-  width: 1rem;
-  height: 1rem;
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .toolbar-row-format .canvas-text-color-chip,
 .toolbar-row-format .canvas-text-highlight-chip {
   min-width: 1.67rem;
   min-height: 1.67rem;
-  padding: 0.15rem;
+  padding: 0;
+}
+
+.toolbar-style-preview {
+  display: grid;
+  gap: 0.28rem;
+  width: 100%;
+}
+
+.toolbar-style-preview-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.toolbar-style-preview-sample {
+  margin: 0;
+  min-height: 2rem;
+  padding: 0.42rem 0.58rem;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, white);
+  border-radius: 12px;
+  background: rgba(255, 253, 249, 0.72);
+  line-height: 1.2;
 }
 
 .toolbar-highlight-shell {
   position: relative;
 }
 
-.toolbar-highlight-button {
+.toolbar-highlight-shell .toolbar-highlight-button {
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
   min-height: 36px;
-  padding-inline: 0.58rem;
+  padding: 0.34rem 0.62rem 0.34rem 0.72rem;
 }
 
 .chip-button.toolbar-highlight-button-active {
@@ -778,38 +803,41 @@ button {
 
 .toolbar-highlight-portal {
   position: fixed;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
   z-index: 51;
 }
 
+.toolbar-highlight-palette {
+  grid-template-columns: repeat(4, 2rem);
+  min-width: max-content;
+  padding: 0.6rem;
+}
+
+.toolbar-background-portal {
+  transform: translateY(-50%);
+  grid-template-columns: repeat(4, 2rem);
+  min-width: max-content;
+  padding: 0.6rem;
+}
+
 .toolbar-highlight-swatch {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.38rem;
-  min-width: 4.2rem;
-  padding: 0.45rem;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.04rem;
   border: 1px solid color-mix(in srgb, var(--line) 84%, white);
-  border-radius: 14px;
+  border-radius: 999px;
   background: rgba(255, 253, 249, 0.98);
-  text-align: left;
 }
 
 .toolbar-highlight-swatch-sample {
   display: block;
   width: 100%;
-  height: 1.15rem;
-  border-radius: 0.45rem;
+  height: 100%;
+  border-radius: 999px;
   background: linear-gradient(90deg, rgba(92, 108, 129, 0.08), rgba(92, 108, 129, 0.14));
-}
-
-.toolbar-highlight-swatch-label {
-  color: var(--ink);
-  font-size: 0.76rem;
-  font-weight: 700;
-  line-height: 1.1;
 }
 
 .toolbar-highlight-swatch-clear .toolbar-highlight-swatch-sample {
@@ -822,7 +850,7 @@ button {
   content: "";
   position: absolute;
   inset: 0.12rem;
-  border-radius: 0.32rem;
+  border-radius: 999px;
   background: linear-gradient(135deg, transparent 44%, color-mix(in srgb, var(--accent) 88%, white) 44%, color-mix(in srgb, var(--accent) 88%, white) 56%, transparent 56%);
 }
 
@@ -833,8 +861,12 @@ button {
 }
 
 .toolbar-highlight-swatch-active {
-  border-color: rgba(31, 45, 61, 0.34);
+  border: 3px solid rgba(31, 45, 61, 0.48);
   box-shadow: inset 0 0 0 1px rgba(31, 45, 61, 0.08);
+}
+
+.toolbar-highlight-swatch-active.toolbar-highlight-swatch-color {
+  box-shadow: inset 0 0 0 2px rgba(255, 253, 249, 0.9);
 }
 
 .toolbar-shortcut-group {
@@ -892,6 +924,15 @@ button {
   min-width: 2.2rem;
   padding-inline: 0.52rem;
   text-align: center;
+}
+
+.toolbar-shortcut-text {
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toolbar-text-button-initial {
+  font-weight: 800;
 }
 
 .math-shortcut-glyph {
@@ -3789,22 +3830,29 @@ input {
 .canvas-text-color-chip {
   display: grid;
   place-items: center;
-  min-width: 2rem;
-  min-height: 2rem;
-  padding: 0.2rem;
+  min-width: 1.9rem;
+  min-height: 1.9rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .canvas-text-color-chip-active {
-  border-color: rgba(31, 45, 61, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(31, 45, 61, 0.08);
+  box-shadow: none;
 }
 
 .canvas-text-color-sample {
   display: block;
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 1.18rem;
+  height: 1.18rem;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(31, 45, 61, 0.1);
+  box-shadow: none;
+  transition: box-shadow 140ms ease, transform 140ms ease;
+}
+
+.canvas-text-color-chip-active .canvas-text-color-sample {
+  box-shadow: 0 0 0 3px var(--swatch-color);
 }
 
 .align-grid-icon {
