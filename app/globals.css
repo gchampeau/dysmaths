@@ -1,3 +1,27 @@
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("/fonts/opendyslexic/OpenDyslexic-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("/fonts/opendyslexic/OpenDyslexic-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("/fonts/opendyslexic/OpenDyslexic-Italic.woff") format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   --surface: rgba(241, 243, 237, 0.94);
@@ -3124,6 +3148,18 @@ input {
   outline: 1.5px dashed color-mix(in srgb, var(--accent) 40%, transparent);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+.document-canvas-font-opendyslexic,
+.document-canvas-font-opendyslexic .canvas-editor,
+.document-canvas-font-opendyslexic .floating-text-box,
+.document-canvas-font-opendyslexic .floating-math-block,
+.document-canvas-font-opendyslexic .floating-math-symbol {
+  font-family: "OpenDyslexic", sans-serif;
+}
+
+.document-canvas-font-opendyslexic .canvas-editor {
+  line-height: 2.05;
 }
 
 .document-canvas-drop-active {
