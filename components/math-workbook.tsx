@@ -542,11 +542,11 @@ export function MathWorkbook() {
     ];
 
     if (selectedItems.length === 0) {
-      return state.activeHighlightColor;
+      return state.activeTextHighlightColor;
     }
 
-    return selectedItems.every((value) => value === selectedItems[0]) ? selectedItems[0] || null : state.activeHighlightColor;
-  }, [selectedBlockIds, selectedSymbolIds, selectedTextBoxIds, state.activeHighlightColor, state.blocks, state.symbols, state.textBoxes]);
+    return selectedItems.every((value) => value === selectedItems[0]) ? selectedItems[0] || null : state.activeTextHighlightColor;
+  }, [selectedBlockIds, selectedSymbolIds, selectedTextBoxIds, state.activeTextHighlightColor, state.blocks, state.symbols, state.textBoxes]);
   const multiSelectionMenuPosition = useMemo(() => {
     if (selectedCount <= 1 || isCanvasInteracting || selectionRect || !canvasRef.current) {
       return null;
@@ -3648,7 +3648,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     if (selectedCount === 0) {
       setState((current) => ({
         ...current,
-        activeHighlightColor: nextHighlight
+        activeTextHighlightColor: nextHighlight
       }));
       runCommand("hiliteColor", nextHighlight ?? "transparent");
       return;
@@ -3656,7 +3656,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
     setState((current) => ({
       ...current,
-      activeHighlightColor: nextHighlight,
+      activeTextHighlightColor: nextHighlight,
       blocks: current.blocks.map((block) =>
         selectedBlockIdsRef.current.includes(block.id) ? { ...block, highlightColor: nextHighlight } : block
       ),
@@ -5412,7 +5412,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
                   left: `${insertCursorPreview.x}px`,
                   top: `${insertCursorPreview.y}px`,
                   color: state.activeColor,
-                  backgroundColor: pendingInsertTool?.kind === "text" ? (state.activeHighlightColor ?? "rgba(255, 250, 243, 0.92)") : undefined,
+                  backgroundColor: pendingInsertTool?.kind === "text" ? (state.activeTextHighlightColor ?? "rgba(255, 250, 243, 0.92)") : undefined,
                   fontSize: pendingInsertTool?.kind === "text" ? `${state.activeFontSize}rem` : undefined,
                   fontWeight: pendingInsertTool?.kind === "text" ? state.activeFontWeight : undefined,
                   fontStyle: pendingInsertTool?.kind === "text" ? state.activeFontStyle : undefined,

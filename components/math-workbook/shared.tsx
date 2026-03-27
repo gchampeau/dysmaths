@@ -266,6 +266,7 @@ export type WriterState = {
   sheetStyle: SheetStyle;
   activeColor: string;
   activeHighlightColor: string | null;
+  activeTextHighlightColor: string | null;
   activeFontSize: number;
   activeFontWeight: number;
   activeFontStyle: "normal" | "italic";
@@ -728,6 +729,7 @@ export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: Def
     sheetStyle,
     activeColor: DEFAULT_ACTIVE_COLOR,
     activeHighlightColor: null,
+    activeTextHighlightColor: null,
     activeFontSize: getDefaultCanvasFontSize(sheetStyle),
     activeFontWeight: 500,
     activeFontStyle: "normal",
@@ -742,8 +744,8 @@ export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: Def
 }
 
 export const COLOR_OPTION_VALUES = [
-  { id: "ink", value: "#1f2d3d" },
   { id: "blue", value: "#2169b3" },
+  { id: "ink", value: "#1f2d3d" },
   { id: "green", value: "#2f8f57" },
   { id: "pink", value: "#b54d7a" }
 ] as const;
@@ -1902,6 +1904,10 @@ export function parseStoredState(raw: string, fallbackSheetStyle: SheetStyle, la
         typeof (parsed as { activeHighlightColor?: unknown }).activeHighlightColor === "string"
           ? parsed.activeHighlightColor
           : defaultState.activeHighlightColor,
+      activeTextHighlightColor:
+        typeof (parsed as { activeTextHighlightColor?: unknown }).activeTextHighlightColor === "string"
+          ? parsed.activeTextHighlightColor
+          : defaultState.activeTextHighlightColor,
       activeFontSize:
         typeof (parsed as { activeFontSize?: unknown }).activeFontSize === "number"
           ? parsed.activeFontSize
