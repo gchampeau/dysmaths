@@ -65,6 +65,23 @@ type Messages = {
       install: string;
       installHelp: string;
     };
+    documentManager: {
+      title: string;
+      rename: string;
+      duplicate: string;
+      delete: string;
+      deleteConfirm: string;
+      deleteHelper: string;
+      exportFile: string;
+      importFile: string;
+      close: string;
+      untitled: string;
+      duplicateSuffix: string;
+      importError: string;
+      created: string;
+      modified: string;
+      manageDocuments: string;
+    };
     geometryHelper: {
       idle: string;
       protractorFirstSide: string;
@@ -296,6 +313,23 @@ const en: Messages = {
       settings: "Settings",
       install: "Install",
       installHelp: "Use the install icon in the address bar or your browser menu to install the app on this device."
+    },
+    documentManager: {
+      title: "My documents",
+      rename: "Rename",
+      duplicate: "Duplicate",
+      delete: "Delete",
+      deleteConfirm: "Delete this document?",
+      deleteHelper: "This document will be permanently deleted.",
+      exportFile: "Save as file",
+      importFile: "Open a file",
+      close: "Close",
+      untitled: "Untitled document",
+      duplicateSuffix: " (copy)",
+      importError: "Could not read this file.",
+      created: "Created",
+      modified: "Modified",
+      manageDocuments: "Manage documents"
     },
     geometryHelper: {
       idle: "Draw precise figures while preserving the sheet scale for printing.",
@@ -538,6 +572,23 @@ const fr: Messages = {
       install: "Installer",
       installHelp: "Utilise l’icône d’installation dans la barre d’adresse ou le menu du navigateur pour installer l’app sur cet appareil."
     },
+    documentManager: {
+      title: "Mes documents",
+      rename: "Renommer",
+      duplicate: "Dupliquer",
+      delete: "Supprimer",
+      deleteConfirm: "Supprimer ce document ?",
+      deleteHelper: "Ce document sera supprimé définitivement.",
+      exportFile: "Enregistrer en fichier",
+      importFile: "Ouvrir un fichier",
+      close: "Fermer",
+      untitled: "Document sans titre",
+      duplicateSuffix: " (copie)",
+      importError: "Impossible de lire ce fichier.",
+      created: "Créé le",
+      modified: "Modifié le",
+      manageDocuments: "Gérer les documents"
+    },
     geometryHelper: {
       idle: "Trace des figures précises en gardant l’échelle de la feuille pour l’impression.",
       protractorFirstSide: "Clique un point sur le premier côté de l’angle.",
@@ -778,6 +829,23 @@ const es: Messages = {
       settings: "Ajustes",
       install: "Instalar",
       installHelp: "Usa el icono de instalación de la barra de direcciones o el menú del navegador para instalar la app en este dispositivo."
+    },
+    documentManager: {
+      title: "Mis documentos",
+      rename: "Renombrar",
+      duplicate: "Duplicar",
+      delete: "Eliminar",
+      deleteConfirm: "¿Eliminar este documento?",
+      deleteHelper: "Este documento se eliminará permanentemente.",
+      exportFile: "Guardar como archivo",
+      importFile: "Abrir un archivo",
+      close: "Cerrar",
+      untitled: "Documento sin título",
+      duplicateSuffix: " (copia)",
+      importError: "No se pudo leer este archivo.",
+      created: "Creado",
+      modified: "Modificado",
+      manageDocuments: "Gestionar documentos"
     },
     geometryHelper: {
       idle: "Traza figuras precisas manteniendo la escala de la hoja para la impresión.",

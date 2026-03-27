@@ -34,6 +34,8 @@ import {
 import {
   CanvasQuickInsertMenu,
   ConfirmResetModal,
+  ConfirmDeleteDocumentModal,
+  DocumentManagerModal,
   ProfileModal,
   GeometrySettingsMenu,
   GraduatedLineModal,
@@ -44,6 +46,21 @@ import {
   WorkbookActionBar,
   WorkbookSidebar
 } from "@/components/math-workbook/presentational";
+import {
+  type DocumentIndex,
+  type DocumentMeta,
+  loadDocumentIndex,
+  saveDocumentIndex,
+  loadDocumentState,
+  saveDocumentState,
+  createDocument,
+  renameDocument,
+  deleteDocument,
+  duplicateDocument,
+  migrateFromLegacyStorage,
+  exportDocumentToFile,
+  parseImportedFile
+} from "@/components/math-workbook/document-store";
 import type {
   StudyMode,
   SheetStyle,
@@ -111,9 +128,7 @@ import type {
   ProfileStore
 } from "@/components/math-workbook/shared";
 import {
-  STORAGE_KEY,
   PROFILE_STORAGE_KEY,
-  WRITER_STATE_SCHEMA_VERSION,
   FLOATING_TEXTBOX_Y_OFFSET,
   CANVAS_QUICK_MENU_OFFSET_X,
   MAX_HISTORY_STEPS,
@@ -203,7 +218,6 @@ import {
   areWriterStatesEqual,
   getGridDimensions,
   getRemPixels,
-  parseStoredState,
   parseStoredProfiles,
   getDocumentLabelsForProfile,
   getDefaultWidth,
@@ -304,6 +318,10 @@ export function MathWorkbook() {
   const [isInstalledApp, setIsInstalledApp] = useState(false);
   const [profileStore, setProfileStore] = useState<ProfileStore>({ profiles: [], activeProfileId: null });
   const [profileEditMode, setProfileEditMode] = useState<"create" | "edit" | null>(null);
+  const [documentIndex, setDocumentIndex] = useState<DocumentIndex>({ version: 1, activeDocumentId: null, documents: [] });
+  const [documentManagerOpen, setDocumentManagerOpen] = useState(false);
+  const [confirmDeleteDocId, setConfirmDeleteDocId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeProfile = useMemo(
     () => profileStore.profiles.find((p) => p.id === profileStore.activeProfileId) ?? null,
     [profileStore]
@@ -750,21 +768,33 @@ export function MathWorkbook() {
   }, [pendingInsertTool, activeInlineShortcuts, activeStructuredTools, t, workbookUi.blockTitles.default]);
 
   useEffect(() => {
+    let index = loadDocumentIndex();
+
+    if (index.documents.length === 0) {
+      index = migrateFromLegacyStorage(defaultSheetStyle, workbookUi.defaultDocumentLabels);
+    }
+
+    if (index.documents.length === 0) {
+      const defaultState = createDefaultState(defaultSheetStyle, workbookUi.defaultDocumentLabels);
+      createDocument(workbookUi.defaultDocumentLabels.title, defaultState);
+      index = loadDocumentIndex();
+    }
+
+    const activeId = index.activeDocumentId ?? index.documents[0]?.id;
+
+    if (activeId) {
+      const loaded = loadDocumentState(activeId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+
+      if (loaded) {
+        setState(loaded);
+      }
+
+      index = { ...index, activeDocumentId: activeId };
+      saveDocumentIndex(index);
+    }
+
+    setDocumentIndex(index);
     setIsHydrated(true);
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return;
-    }
-
-    const parsed = parseStoredState(saved, defaultSheetStyle, workbookUi.defaultDocumentLabels);
-
-    if (!parsed) {
-      window.localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    setState(parsed);
   }, [defaultSheetStyle, workbookUi.defaultDocumentLabels]);
 
   useEffect(() => {
@@ -780,12 +810,12 @@ export function MathWorkbook() {
   }, []);
 
   useEffect(() => {
-    if (!isHydrated) {
+    if (!isHydrated || !documentIndex.activeDocumentId) {
       return;
     }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [isHydrated, state]);
+    saveDocumentState(documentIndex.activeDocumentId, state);
+  }, [isHydrated, state, documentIndex.activeDocumentId]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(PROFILE_STORAGE_KEY);
@@ -4879,7 +4909,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
   function confirmResetDocument() {
     const labels = getDocumentLabelsForProfile(activeProfile, workbookUi.defaultDocumentLabels, locale);
     const sheetStyle = activeProfile?.preferredSheetStyle ?? defaultSheetStyle;
-    window.localStorage.removeItem(STORAGE_KEY);
     const newState = createDefaultState(sheetStyle, labels);
 
     if (activeProfile) {
@@ -4902,9 +4931,146 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setConfirmResetState(null);
     clearFloatingSelection();
     selectionRef.current = null;
+    setHistoryPast([]);
+    setHistoryFuture([]);
     if (editorRef.current) {
       editorRef.current.innerHTML = DEFAULT_TEXT_HTML;
     }
+  }
+
+  function clearTransientState() {
+    setOpenMenu(null);
+    setCanvasQuickMenu(null);
+    setModalState(null);
+    setConfirmResetState(null);
+    clearGraduatedLineDraftState();
+    clearFloatingSelection();
+    selectionRef.current = null;
+    setEditingBlock(null);
+    setEditingTextBoxId(null);
+    setHistoryPast([]);
+    setHistoryFuture([]);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = DEFAULT_TEXT_HTML;
+    }
+  }
+
+  function handleSwitchDocument(docId: string) {
+    if (docId === documentIndex.activeDocumentId) return;
+
+    const loaded = loadDocumentState(docId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+    if (!loaded) return;
+
+    clearTransientState();
+    setState(loaded);
+
+    const newIndex = { ...documentIndex, activeDocumentId: docId };
+    saveDocumentIndex(newIndex);
+    setDocumentIndex(newIndex);
+    setDocumentManagerOpen(false);
+  }
+
+  function handleNewDocument() {
+    const labels = getDocumentLabelsForProfile(activeProfile, workbookUi.defaultDocumentLabels, locale);
+    const sheetStyle = activeProfile?.preferredSheetStyle ?? defaultSheetStyle;
+    const newState = createDefaultState(sheetStyle, labels);
+
+    if (activeProfile) {
+      newState.mode = activeProfile.preferredMode;
+
+      if (newState.textBoxes.length >= 3) {
+        if (!activeProfile.showName) newState.textBoxes[0] = { ...newState.textBoxes[0], hidden: true };
+        if (!activeProfile.showClass) newState.textBoxes[1] = { ...newState.textBoxes[1], hidden: true };
+        if (!activeProfile.showDate) newState.textBoxes[2] = { ...newState.textBoxes[2], hidden: true };
+      }
+
+      newState.textBoxes = applyHeaderPositions(newState.textBoxes, activeProfile);
+    }
+
+    const meta = createDocument(newState.title, newState);
+    clearTransientState();
+    setState(newState);
+    setDocumentIndex(loadDocumentIndex());
+    setDocumentManagerOpen(false);
+  }
+
+  function handleDuplicateDocument(docId: string) {
+    const meta = documentIndex.documents.find((d) => d.id === docId);
+    if (!meta) return;
+
+    const newName = meta.name + t("documentManager.duplicateSuffix");
+    const newMeta = duplicateDocument(docId, newName, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+    if (!newMeta) return;
+
+    setDocumentIndex(loadDocumentIndex());
+    handleSwitchDocument(newMeta.id);
+  }
+
+  function handleDeleteDocument(docId: string) {
+    setConfirmDeleteDocId(docId);
+  }
+
+  function handleConfirmDeleteDocument() {
+    if (!confirmDeleteDocId) return;
+
+    const wasActive = confirmDeleteDocId === documentIndex.activeDocumentId;
+    deleteDocument(confirmDeleteDocId);
+    const newIndex = loadDocumentIndex();
+    setDocumentIndex(newIndex);
+    setConfirmDeleteDocId(null);
+
+    if (wasActive && newIndex.documents.length > 0) {
+      handleSwitchDocument(newIndex.activeDocumentId ?? newIndex.documents[0].id);
+    }
+  }
+
+  function handleRenameDocument(docId: string, name: string) {
+    renameDocument(docId, name);
+    setDocumentIndex(loadDocumentIndex());
+  }
+
+  function handleExportDocumentFile(docId?: string) {
+    const targetId = docId ?? documentIndex.activeDocumentId;
+    if (!targetId) return;
+
+    const meta = documentIndex.documents.find((d) => d.id === targetId);
+    if (!meta) return;
+
+    if (targetId === documentIndex.activeDocumentId) {
+      exportDocumentToFile(meta, state);
+    } else {
+      const docState = loadDocumentState(targetId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+      if (docState) exportDocumentToFile(meta, docState);
+    }
+  }
+
+  function handleImportDocumentFile() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileInputChange(event: ReactChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = reader.result as string;
+      const result = parseImportedFile(raw, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+
+      if (!result) {
+        window.alert(t("documentManager.importError"));
+        return;
+      }
+
+      const meta = createDocument(result.name, result.state);
+      clearTransientState();
+      setState(result.state);
+      setDocumentIndex(loadDocumentIndex());
+      setDocumentManagerOpen(false);
+    };
+
+    reader.readAsText(file);
+    event.target.value = "";
   }
 
   function applyHeaderPositions(textBoxes: FloatingTextBox[], profile: UserProfile): FloatingTextBox[] {
@@ -5311,14 +5477,21 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           isExporting={isExporting}
           sheetStyle={state.sheetStyle}
           sheetStyleOptions={workbookUi.sheetStyleOptions}
+          documents={documentIndex.documents}
+          activeDocumentId={documentIndex.activeDocumentId}
           onOpenTools={() => setIsToolsPanelOpen(true)}
           onUndo={undoHistory}
           onRedo={redoHistory}
           onExportPdf={exportPdf}
           onExportPng={exportPng}
           onPrint={printSheet}
+          onExportDocumentFile={() => handleExportDocumentFile()}
           onSheetStyleChange={(sheetStyle) => setState((current) => ({...current, sheetStyle}))}
           onResetDocument={resetDocument}
+          onSwitchDocument={handleSwitchDocument}
+          onNewDocument={handleNewDocument}
+          onImportDocument={handleImportDocumentFile}
+          onOpenDocumentManager={() => setDocumentManagerOpen(true)}
           profiles={profileStore.profiles}
           activeProfileId={profileStore.activeProfileId}
           onProfileChange={handleProfileChange}
@@ -5825,6 +5998,34 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         confirmResetState={confirmResetState}
         onClose={() => setConfirmResetState(null)}
         onConfirm={confirmResetDocument}
+      />
+      {documentManagerOpen ? (
+        <DocumentManagerModal
+          t={t}
+          documents={documentIndex.documents}
+          activeDocumentId={documentIndex.activeDocumentId}
+          onSwitchDocument={handleSwitchDocument}
+          onRenameDocument={handleRenameDocument}
+          onDuplicateDocument={handleDuplicateDocument}
+          onDeleteDocument={handleDeleteDocument}
+          onExportDocument={(docId) => handleExportDocumentFile(docId)}
+          onImportDocument={handleImportDocumentFile}
+          onClose={() => setDocumentManagerOpen(false)}
+        />
+      ) : null}
+      {confirmDeleteDocId ? (
+        <ConfirmDeleteDocumentModal
+          t={t}
+          onClose={() => setConfirmDeleteDocId(null)}
+          onConfirm={handleConfirmDeleteDocument}
+        />
+      ) : null}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".dysmaths,.json"
+        style={{ display: "none" }}
+        onChange={handleFileInputChange}
       />
       {profileEditMode ? (
         <ProfileModal

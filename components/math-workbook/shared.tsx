@@ -498,6 +498,7 @@ export type SymbolResizeState = {
   startSize: number;
 };
 
+/** @deprecated Use document-store.ts for multi-document storage. Kept for migration. */
 export const STORAGE_KEY = "maths-facile-free-layout-v1";
 export const PROFILE_STORAGE_KEY = "dysmaths-profiles-v1";
 export const WRITER_STATE_SCHEMA_VERSION = 2;
