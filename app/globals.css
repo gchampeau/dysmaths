@@ -711,7 +711,7 @@ button {
   align-items: center;
   gap: 0.42rem;
   min-height: 36px;
-  padding: 0.34rem 0.62rem;
+  padding: 0.34rem 0.62rem 0.34rem 0.72rem;
 }
 
 .chip-button.toolbar-highlight-button-active {
@@ -804,6 +804,12 @@ button {
 .toolbar-highlight-portal {
   position: fixed;
   z-index: 51;
+}
+
+.toolbar-highlight-palette {
+  grid-template-columns: repeat(4, 2rem);
+  min-width: max-content;
+  padding: 0.6rem;
 }
 
 .toolbar-background-portal {

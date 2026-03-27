@@ -728,7 +728,7 @@ export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: Def
     mode: "middleSchool",
     sheetStyle,
     activeColor: DEFAULT_ACTIVE_COLOR,
-    activeHighlightColor: null,
+    activeHighlightColor: DEFAULT_HIGHLIGHT_TOOL_COLOR,
     activeTextHighlightColor: null,
     activeFontSize: getDefaultCanvasFontSize(sheetStyle),
     activeFontWeight: 500,

@@ -1,6 +1,6 @@
-import {useState} from "react";
+import {useRef, useState} from "react";
 import {createPortal} from "react-dom";
-import type {CSSProperties as ReactCSSProperties, DragEvent as ReactDragEvent, ReactNode, RefObject} from "react";
+import type {CSSProperties as ReactCSSProperties, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject} from "react";
 import {localeLabels, type AppLocale} from "@/i18n/routing";
 import {
   renderShortcutGlyph,
@@ -168,6 +168,38 @@ export function WorkbookSidebar({
   onSetProfileEditMode
 }: WorkbookSidebarProps) {
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
+  const highlightShellRef = useRef<HTMLDivElement | null>(null);
+  const [highlightMenuPosition, setHighlightMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  function openHighlightMenu() {
+    const rect = highlightShellRef.current?.getBoundingClientRect();
+
+    if (!rect) {
+      setHighlightMenuPosition(null);
+      onToggleMenu("highlight");
+      return;
+    }
+
+    setHighlightMenuPosition({
+      left: rect.left,
+      top: rect.bottom + 8
+    });
+    onToggleMenu("highlight");
+  }
+
+  function closeHighlightMenu() {
+    setHighlightMenuPosition(null);
+    onToggleMenu("highlight");
+  }
+
+  function handleHighlightButtonClick(_event: ReactMouseEvent<HTMLButtonElement>) {
+    if (openMenu === "highlight") {
+      closeHighlightMenu();
+      return;
+    }
+
+    openHighlightMenu();
+  }
   return (
     <>
       {isToolsPanelOpen ? <button type="button" className="tools-drawer-backdrop" aria-label={t("toolbar.closeTools")} onClick={onCloseToolsPanel} /> : null}
@@ -242,34 +274,33 @@ export function WorkbookSidebar({
               >
                 <span aria-hidden="true" className="toolbar-text-button-initial">T</span>exte
               </button>
-              <div className="toolbar-highlight-shell">
+              <div ref={highlightShellRef} className="toolbar-highlight-shell">
                 <button
                   type="button"
                   className={`chip-button toolbar-highlight-button ${openMenu === "highlight" || advancedTool === "highlight" ? "toolbar-highlight-button-active" : ""}`}
                   aria-label={t("toolbar.highlighter")}
                   title={t("toolbar.highlighter")}
+                  aria-expanded={openMenu === "highlight"}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={onToggleHighlightTool}
+                  onClick={handleHighlightButtonClick}
                 >
                   <span className="toolbar-highlight-marker" aria-hidden="true">
                     <span className="toolbar-highlight-marker-tip" />
                     <span className="toolbar-highlight-marker-body" />
-                    <span className="toolbar-highlight-marker-line" style={{backgroundColor: selectedHighlightColor ?? DEFAULT_HIGHLIGHT_TOOL_COLOR}} />
+                    <span className="toolbar-highlight-marker-line" style={{backgroundColor: activeHighlightColor ?? DEFAULT_HIGHLIGHT_TOOL_COLOR}} />
                   </span>
                   <span className="toolbar-highlight-caret" aria-hidden="true">▾</span>
                 </button>
 
                 {openMenu === "highlight" ? createPortal(
-                  <div className="toolbar-highlight-backdrop" onMouseDown={(event) => {
-                    const x = event.clientX;
-                    const y = event.clientY;
-                    onToggleMenu("highlight");
-                    requestAnimationFrame(() => {
-                      const el = document.elementFromPoint(x, y);
-                      if (el instanceof HTMLElement) { el.click(); }
-                    });
-                  }}>
-                    <div className="toolbar-highlight-panel toolbar-highlight-portal" role="menu" aria-label={t("toolbar.chooseHighlighter")} onMouseDown={(event) => event.stopPropagation()}>
+                  <div className="toolbar-highlight-backdrop" onMouseDown={closeHighlightMenu}>
+                    <div
+                      className="toolbar-highlight-panel toolbar-highlight-portal toolbar-highlight-palette"
+                      role="menu"
+                      aria-label={t("toolbar.chooseHighlighter")}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      style={highlightMenuPosition ? {left: `${highlightMenuPosition.left}px`, top: `${highlightMenuPosition.top}px`} : undefined}
+                    >
                       {highlightOptions.map((option) => (
                         <button
                           key={option.id}
@@ -281,7 +312,6 @@ export function WorkbookSidebar({
                           onClick={() => onActivateHighlightTool(option.value)}
                         >
                           <span className="toolbar-highlight-swatch-sample" style={option.value ? {backgroundColor: option.value} : undefined} />
-                          <span className="toolbar-highlight-swatch-label">{option.label}</span>
                         </button>
                       ))}
                     </div>

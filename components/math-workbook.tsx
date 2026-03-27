@@ -1002,6 +1002,34 @@ export function MathWorkbook() {
   }, [canvasQuickMenu, selectedCount, historyPast.length, historyFuture.length, selectedBlock, selectedGeometry, selectedSymbol, selectedTextBox, selectedStroke]);
 
   useEffect(() => {
+    const handleDocumentMouseDown = (event: MouseEvent) => {
+      if (advancedToolRef.current !== "highlight") {
+        return;
+      }
+
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      if (canvasRef.current?.contains(target)) {
+        return;
+      }
+
+      if (target.closest(".toolbar-highlight-shell") || target.closest(".toolbar-highlight-panel")) {
+        return;
+      }
+
+      setAdvancedTool(null);
+      setOpenMenu(null);
+    };
+
+    document.addEventListener("mousedown", handleDocumentMouseDown);
+    return () => document.removeEventListener("mousedown", handleDocumentMouseDown);
+  }, []);
+
+  useEffect(() => {
     if (pendingInsertTool) {
       setAdvancedTool(null);
       setCanvasQuickMenu(null);
@@ -5077,12 +5105,13 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
   }
 
   function toggleHighlightTool() {
-    if (advancedTool !== "highlight") {
-      activateHighlightTool(state.activeHighlightColor || DEFAULT_HIGHLIGHT_TOOL_COLOR);
-      setOpenMenu("highlight");
-    } else {
-      toggleMenu("highlight");
+    if (advancedTool === "highlight") {
+      setAdvancedTool(null);
+      setOpenMenu(null);
+      return;
     }
+
+    activateHighlightTool(state.activeHighlightColor || DEFAULT_HIGHLIGHT_TOOL_COLOR);
   }
 
   function toggleAdvancedToolMode(tool: AdvancedTool) {
