@@ -1,6 +1,6 @@
-import {useState} from "react";
+import {useRef, useState} from "react";
 import {createPortal} from "react-dom";
-import type {DragEvent as ReactDragEvent, ReactNode, RefObject} from "react";
+import type {CSSProperties as ReactCSSProperties, DragEvent as ReactDragEvent, ReactNode, RefObject} from "react";
 import {localeLabels, type AppLocale} from "@/i18n/routing";
 import {
   renderShortcutGlyph,
@@ -94,7 +94,7 @@ type WorkbookSidebarProps = {
   onToggleCanvasItalic: () => void;
   onToggleCanvasUnderline: () => void;
   onAdjustCanvasSize: (direction: "down" | "up") => void;
-  onToggleMenu: (menu: "highlight" | "settings" | "install") => void;
+  onToggleMenu: (menu: "highlight" | "background" | "settings" | "install") => void;
   onToggleHighlightTool: () => void;
   onActivateHighlightTool: (highlightColor: string) => void;
   onHeaderDelete: () => void;
@@ -162,6 +162,28 @@ export function WorkbookSidebar({
   onSetProfileEditMode
 }: WorkbookSidebarProps) {
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
+  const backgroundButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [backgroundMenuPosition, setBackgroundMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  function openBackgroundMenu() {
+    const rect = backgroundButtonRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setBackgroundMenuPosition(null);
+      onToggleMenu("background");
+      return;
+    }
+
+    setBackgroundMenuPosition({
+      left: rect.right + 12,
+      top: rect.top + rect.height / 2
+    });
+    onToggleMenu("background");
+  }
+
+  function closeBackgroundMenu() {
+    setBackgroundMenuPosition(null);
+    onToggleMenu("background");
+  }
   return (
     <>
       {isToolsPanelOpen ? <button type="button" className="tools-drawer-backdrop" aria-label={t("toolbar.closeTools")} onClick={onCloseToolsPanel} /> : null}
@@ -252,6 +274,21 @@ export function WorkbookSidebar({
             <p className="sidebar-block-label">{t("toolbar.defaultStyle")}</p>
 
             <div className="toolbar-color-row">
+              <button
+                ref={backgroundButtonRef}
+                type="button"
+                className={`canvas-quick-action canvas-text-highlight-chip${openMenu === "background" ? " canvas-text-highlight-chip-active" : ""}`}
+                title={t("toolbar.backgroundColor")}
+                aria-label={t("toolbar.backgroundColor")}
+                aria-expanded={openMenu === "background"}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={openBackgroundMenu}
+              >
+                <svg viewBox="0 0 16 14" width="16" height="14" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
+                  <rect x="1" y="1" width="14" height="12" rx="2" />
+                  <rect x="3" y="3" width="10" height="8" rx="1" fill={activeHighlightColor ?? "none"} stroke={activeHighlightColor ? "none" : "currentColor"} strokeWidth="0.8" strokeDasharray="2 1.2" />
+                </svg>
+              </button>
               <span className="toolbar-color-icon" title={t("toolbar.textColor")} aria-label={t("toolbar.textColor")}>
                 <span className="toolbar-color-icon-letter" aria-hidden="true">A</span>
                 <span className="toolbar-color-icon-bar" style={{backgroundColor: activeColor}} aria-hidden="true" />
@@ -261,6 +298,7 @@ export function WorkbookSidebar({
                   key={option.id}
                   type="button"
                   className={`canvas-quick-action canvas-text-color-chip${activeColor === option.value ? " canvas-text-color-chip-active" : ""}`}
+                  style={{"--swatch-color": option.value} as ReactCSSProperties}
                   aria-label={option.label}
                   title={option.label}
                   onMouseDown={(event) => event.preventDefault()}
@@ -269,36 +307,44 @@ export function WorkbookSidebar({
                   <span className="canvas-text-color-sample" style={{backgroundColor: option.value}} />
                 </button>
               ))}
-            </div>
-
-            <div className="toolbar-color-row">
-              <span className="toolbar-color-icon" title={t("toolbar.backgroundColor")} aria-label={t("toolbar.backgroundColor")}>
-                <svg viewBox="0 0 16 14" width="16" height="14" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
-                  <rect x="1" y="1" width="14" height="12" rx="2" />
-                  <rect x="3" y="3" width="10" height="8" rx="1" fill={activeHighlightColor ?? "none"} stroke={activeHighlightColor ? "none" : "currentColor"} strokeWidth="0.8" strokeDasharray="2 1.2" />
-                </svg>
-              </span>
-              <button
-                type="button"
-                className={`canvas-quick-action canvas-text-highlight-chip${activeHighlightColor === null ? " canvas-text-highlight-chip-active" : ""}`}
-                title={t("toolbar.noBackground")}
-                aria-label={t("toolbar.noBackground")}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => onApplyActiveHighlightColor("")}
-              >∅</button>
-              {highlightOptions.filter((o) => o.value).map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`canvas-quick-action canvas-text-highlight-chip${activeHighlightColor === option.value ? " canvas-text-highlight-chip-active" : ""}`}
-                  aria-label={option.label}
-                  title={option.label}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => onApplyActiveHighlightColor(option.value)}
-                >
-                  <span className="canvas-text-highlight-sample" style={{backgroundColor: option.value}} />
-                </button>
-              ))}
+              {openMenu === "background" ? createPortal(
+                <div className="toolbar-highlight-backdrop" onMouseDown={closeBackgroundMenu}>
+                  <div
+                    className="toolbar-highlight-panel toolbar-highlight-portal toolbar-background-portal"
+                    role="menu"
+                    aria-label={t("toolbar.backgroundColor")}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    style={backgroundMenuPosition ? {left: `${backgroundMenuPosition.left}px`, top: `${backgroundMenuPosition.top}px`} : undefined}
+                  >
+                    <button
+                      type="button"
+                      className={`toolbar-highlight-swatch toolbar-highlight-swatch-clear ${activeHighlightColor === null ? "toolbar-highlight-swatch-active toolbar-highlight-swatch-color" : ""}`}
+                      aria-label={t("toolbar.noBackground")}
+                      title={t("toolbar.noBackground")}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => onApplyActiveHighlightColor("")}
+                      style={activeHighlightColor === null ? {borderColor: "var(--accent)", boxShadow: "inset 0 0 0 2px var(--accent)"} : undefined}
+                    >
+                      <span className="toolbar-highlight-swatch-sample" />
+                    </button>
+                    {highlightOptions.filter((option) => option.value).map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`toolbar-highlight-swatch ${option.value === activeHighlightColor ? "toolbar-highlight-swatch-active toolbar-highlight-swatch-color" : ""}`}
+                        aria-label={option.label}
+                        title={option.label}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => onApplyActiveHighlightColor(option.value)}
+                        style={option.value === activeHighlightColor ? {borderColor: option.value, boxShadow: `inset 0 0 0 2px ${option.value}`} : undefined}
+                      >
+                        <span className="toolbar-highlight-swatch-sample" style={{backgroundColor: option.value}} />
+                      </button>
+                    ))}
+                  </div>
+                </div>,
+                document.body
+              ) : null}
             </div>
 
             <div className="toolbar-color-row">
@@ -1358,6 +1404,7 @@ export function TextFormatMenu({
             key={option.id}
             type="button"
             className={`canvas-quick-action canvas-text-color-chip ${activeColor === option.value ? "canvas-text-color-chip-active" : ""}`}
+            style={{"--swatch-color": option.value} as ReactCSSProperties}
             aria-label={option.label}
             title={option.label}
             onClick={() => onApplyColor(option.value)}

@@ -6,7 +6,7 @@ import {type AppLocale} from "@/i18n/routing";
 export type StudyMode = "middleSchool" | "highSchool";
 export type SheetStyle = "seyes" | "large-grid" | "small-grid" | "lined" | "blank";
 export type StructuredTool = "fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root";
-export type UtilityMenu = "highlight" | "settings" | "install" | null;
+export type UtilityMenu = "highlight" | "background" | "settings" | "install" | null;
 export type GeometryTool = "point" | "segment" | "line" | "ray" | "circle" | "measure" | "protractor" | "compass";
 
 export type FractionBlock = {
@@ -507,7 +507,7 @@ export const CANVAS_GRID_LEFT_REM = 4.8;
 export const CANVAS_GRID_TOP_REM = PAPER_LINE_STEP_REM;
 export const MAX_SNAP_THRESHOLD_PX = 10;
 export const CANVAS_LINE_BASELINE_OFFSET_PX = 5;
-export const DEFAULT_ACTIVE_COLOR = "#1f2d3d";
+export const DEFAULT_ACTIVE_COLOR = "#2169b3";
 export const DEFAULT_HIGHLIGHT_TOOL_COLOR = "rgb(255 226 92)";
 export const DEFAULT_SUM_SYMBOL_SIZE = 54;
 export const DEFAULT_INTEGRAL_SYMBOL_SIZE = 60;
@@ -740,7 +740,6 @@ export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: Def
 
 export const COLOR_OPTION_VALUES = [
   { id: "ink", value: "#1f2d3d" },
-  { id: "orange", value: "#d56f3c" },
   { id: "blue", value: "#2169b3" },
   { id: "green", value: "#2f8f57" },
   { id: "pink", value: "#b54d7a" }
