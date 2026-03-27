@@ -1509,7 +1509,7 @@ export function MathWorkbook() {
 
   function createBlock(type: StructuredTool) {
     const count = state.blocks.length;
-    const defaultFontSize = getDefaultCanvasFontSize(state.sheetStyle);
+    const defaultFontSize = state.activeFontSize;
     const position = {
       x: 80 + (count % 3) * 48,
       y: 140 + count * 34,
@@ -1631,7 +1631,7 @@ export function MathWorkbook() {
   }
 
   function createFloatingSymbol(shortcut: InlineShortcutItem, x: number, y: number) {
-    const defaultFontSize = getDefaultCanvasFontSize(state.sheetStyle);
+    const defaultFontSize = state.activeFontSize;
 
     if (shortcut.id === "sum") {
       return {
@@ -1713,7 +1713,7 @@ export function MathWorkbook() {
     notation: "plain" | "angle" = "plain",
     yOffset = FLOATING_TEXTBOX_Y_OFFSET
   ) {
-    const defaultFontSize = getDefaultCanvasFontSize(state.sheetStyle);
+    const defaultFontSize = state.activeFontSize;
     const defaultNoteFontSize = getDefaultNoteFontSize(state.sheetStyle);
     return {
       id: createId("text"),
@@ -3020,10 +3020,10 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         placement.y,
         "default",
         "plain",
-        mode === "exact" ? getExactTextBoxVerticalOffset("default") : FLOATING_TEXTBOX_Y_OFFSET
+        mode === "exact" ? 0 : FLOATING_TEXTBOX_Y_OFFSET
       ),
       text: initialText,
-      width: getTextBoxWidth(initialText, getDefaultCanvasFontSize(state.sheetStyle))
+      width: getTextBoxWidth(initialText, state.activeFontSize)
     };
     beginTransientHistorySession("edit");
 
@@ -3545,7 +3545,10 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
   function toggleCanvasBold() {
     if (selectedCount === 0) {
-      if (editingTextBoxId) { runCommand("bold"); }
+      setState((current) => ({
+        ...current,
+        activeFontWeight: current.activeFontWeight >= 700 ? 500 : 700
+      }));
       return;
     }
 
@@ -3577,7 +3580,10 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
   function toggleCanvasItalic() {
     if (selectedCount === 0) {
-      if (editingTextBoxId) { runCommand("italic"); }
+      setState((current) => ({
+        ...current,
+        activeFontStyle: current.activeFontStyle === "italic" ? "normal" : "italic"
+      }));
       return;
     }
 
@@ -3606,7 +3612,10 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
   function toggleCanvasUnderline() {
     if (selectedCount === 0) {
-      if (editingTextBoxId) { runCommand("underline"); }
+      setState((current) => ({
+        ...current,
+        activeUnderline: !current.activeUnderline
+      }));
       return;
     }
 
@@ -3679,12 +3688,15 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
   }
 
   function adjustCanvasSize(direction: "down" | "up") {
+    const delta = direction === "up" ? 0.12 : -0.12;
+
     if (selectedCount === 0) {
-      runCommand("fontSize", direction === "up" ? "5" : "2");
+      setState((current) => ({
+        ...current,
+        activeFontSize: Math.max(0.9, Math.min(2.6, Number((current.activeFontSize + delta).toFixed(2))))
+      }));
       return;
     }
-
-    const delta = direction === "up" ? 0.12 : -0.12;
 
     setState((current) => ({
       ...current,
@@ -4542,7 +4554,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setPendingInsertTool(null);
     event.dataTransfer.effectAllowed = "copy";
     event.dataTransfer.setData("application/x-maths-tool", JSON.stringify(payload));
-    event.dataTransfer.setData("text/plain", payload.kind === "shortcut" ? payload.shortcutId : payload.toolId);
+    event.dataTransfer.setData("text/plain", payload.kind === "shortcut" ? payload.shortcutId : payload.kind === "structured" ? payload.toolId : payload.kind);
     event.dataTransfer.setDragImage(previewNode, offsetX, offsetY);
     setOpenMenu(null);
   }
@@ -4627,6 +4639,11 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     );
 
     handleToolDragEnd();
+
+    if (payload.kind === "text") {
+      createTextBoxAt(position.x, position.y, "exact");
+      return;
+    }
 
     if (payload.kind === "structured") {
       const block = { ...createBlock(payload.toolId), x: position.x, y: position.y };
@@ -5198,13 +5215,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         highlightOptions={workbookUi.highlightOptions}
         activeHighlightColor={state.activeHighlightColor}
         selectedHighlightColor={selectedHighlightColor}
+        activeFontSize={state.activeFontSize}
         openMenu={openMenu}
         selectedCount={selectedCount}
         canInstallApp={canInstallApp}
         isInstalledApp={isInstalledApp}
         onCloseToolsPanel={() => setIsToolsPanelOpen(false)}
         onToggleGeometryTool={toggleGeometryTool}
+        onTextToolDragStart={(event) => handleToolDragStart({kind: "text"}, event)}
         onStructuredToolDragStart={(toolId, event) => handleToolDragStart({kind: "structured", toolId}, event)}
+        onTogglePendingTextTool={() => togglePendingInsertTool({kind: "text"})}
         onShortcutDragStart={(shortcutId, event) => handleToolDragStart({kind: "shortcut", shortcutId}, event)}
         onToolDragEnd={handleToolDragEnd}
         onTogglePendingStructuredTool={(toolId) => togglePendingInsertTool({kind: "structured", toolId})}
@@ -5385,19 +5405,30 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               onPaste={handlePaste}
             />
 
-            {(pendingInsertTool?.kind === "shortcut" || pendingInsertTool?.kind === "scriptLetter") && insertCursorPreview.visible ? (
+            {(pendingInsertTool?.kind === "shortcut" || pendingInsertTool?.kind === "scriptLetter" || pendingInsertTool?.kind === "text") && insertCursorPreview.visible ? (
               <div
                 className="canvas-insert-anchor"
-                style={{ left: `${insertCursorPreview.x}px`, top: `${insertCursorPreview.y}px`, color: state.activeColor }}
+                style={{
+                  left: `${insertCursorPreview.x}px`,
+                  top: `${insertCursorPreview.y}px`,
+                  color: state.activeColor,
+                  backgroundColor: pendingInsertTool?.kind === "text" ? (state.activeHighlightColor ?? "rgba(255, 250, 243, 0.92)") : undefined,
+                  fontSize: pendingInsertTool?.kind === "text" ? `${state.activeFontSize}rem` : undefined,
+                  fontWeight: pendingInsertTool?.kind === "text" ? state.activeFontWeight : undefined,
+                  fontStyle: pendingInsertTool?.kind === "text" ? state.activeFontStyle : undefined,
+                  textDecoration: pendingInsertTool?.kind === "text" && state.activeUnderline ? "underline" : undefined
+                }}
                 aria-hidden="true"
               >
-                {pendingInsertTool.kind === "scriptLetter"
+                {pendingInsertTool.kind === "text"
+                  ? t("toolbar.text")
+                  : pendingInsertTool.kind === "scriptLetter"
                   ? renderShortcutGlyph({ id: "scriptLetter", label: pendingInsertTool.label })
                   : renderShortcutGlyph(findShortcutById(pendingInsertTool.shortcutId) ?? { id: pendingInsertTool.shortcutId, label: "?" })}
               </div>
             ) : null}
 
-            {((pendingInsertTool && pendingInsertTool.kind !== "shortcut" && pendingInsertTool.kind !== "scriptLetter") || advancedTool === "highlight") && insertCursorPreview.visible ? (
+            {((pendingInsertTool && pendingInsertTool.kind !== "shortcut" && pendingInsertTool.kind !== "scriptLetter" && pendingInsertTool.kind !== "text") || advancedTool === "highlight") && insertCursorPreview.visible ? (
               <div
                 className={`canvas-insert-cursor ${advancedTool === "highlight" ? "canvas-insert-cursor-highlighter" : ""} ${pendingInsertTool?.kind === "shortcut" ? "canvas-insert-cursor-symbol" : ""}`}
                 style={{

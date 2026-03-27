@@ -679,6 +679,29 @@ button {
   padding: 0;
 }
 
+.toolbar-style-preview {
+  display: grid;
+  gap: 0.28rem;
+  width: 100%;
+}
+
+.toolbar-style-preview-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.toolbar-style-preview-sample {
+  margin: 0;
+  min-height: 2rem;
+  padding: 0.42rem 0.58rem;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, white);
+  border-radius: 12px;
+  background: rgba(255, 253, 249, 0.72);
+  line-height: 1.2;
+}
+
 .toolbar-highlight-shell {
   position: relative;
 }
@@ -895,6 +918,15 @@ button {
   min-width: 2.2rem;
   padding-inline: 0.52rem;
   text-align: center;
+}
+
+.toolbar-shortcut-text {
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toolbar-text-button-initial {
+  font-weight: 800;
 }
 
 .math-shortcut-glyph {

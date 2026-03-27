@@ -1,4 +1,4 @@
-import {useRef, useState} from "react";
+import {useState} from "react";
 import {createPortal} from "react-dom";
 import type {CSSProperties as ReactCSSProperties, DragEvent as ReactDragEvent, ReactNode, RefObject} from "react";
 import {localeLabels, type AppLocale} from "@/i18n/routing";
@@ -70,6 +70,7 @@ type WorkbookSidebarProps = {
   highlightOptions: HighlightOption[];
   activeHighlightColor: string | null;
   selectedHighlightColor: string | null;
+  activeFontSize: number;
   openMenu: "highlight" | "settings" | "install" | null;
   selectedCount: number;
   activeFontWeight: number;
@@ -80,10 +81,12 @@ type WorkbookSidebarProps = {
   isInstalledApp: boolean;
   onCloseToolsPanel: () => void;
   onToggleGeometryTool: (tool: GeometryTool) => void;
+  onTextToolDragStart: (event: ReactDragEvent<HTMLButtonElement>) => void;
   onStructuredToolDragStart: (toolId: StructuredTool, event: ReactDragEvent<HTMLButtonElement>) => void;
   onShortcutDragStart: (shortcutId: string, event: ReactDragEvent<HTMLButtonElement>) => void;
   onToolDragEnd: () => void;
   onTogglePendingStructuredTool: (toolId: StructuredTool) => void;
+  onTogglePendingTextTool: () => void;
   onTogglePendingShortcut: (shortcutId: string) => void;
   onSelectScriptLetter: (label: string, content: string) => void;
   onToggleAdvancedToolMode: (tool: AdvancedTool) => void;
@@ -94,7 +97,7 @@ type WorkbookSidebarProps = {
   onToggleCanvasItalic: () => void;
   onToggleCanvasUnderline: () => void;
   onAdjustCanvasSize: (direction: "down" | "up") => void;
-  onToggleMenu: (menu: "highlight" | "background" | "settings" | "install") => void;
+  onToggleMenu: (menu: "highlight" | "settings" | "install") => void;
   onToggleHighlightTool: () => void;
   onActivateHighlightTool: (highlightColor: string) => void;
   onHeaderDelete: () => void;
@@ -125,6 +128,7 @@ export function WorkbookSidebar({
   highlightOptions,
   activeHighlightColor,
   selectedHighlightColor,
+  activeFontSize,
   openMenu,
   selectedCount,
   activeFontWeight,
@@ -135,7 +139,9 @@ export function WorkbookSidebar({
   isInstalledApp,
   onCloseToolsPanel,
   onToggleGeometryTool,
+  onTextToolDragStart,
   onStructuredToolDragStart,
+  onTogglePendingTextTool,
   onShortcutDragStart,
   onToolDragEnd,
   onTogglePendingStructuredTool,
@@ -162,28 +168,6 @@ export function WorkbookSidebar({
   onSetProfileEditMode
 }: WorkbookSidebarProps) {
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
-  const backgroundButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [backgroundMenuPosition, setBackgroundMenuPosition] = useState<{ left: number; top: number } | null>(null);
-
-  function openBackgroundMenu() {
-    const rect = backgroundButtonRef.current?.getBoundingClientRect();
-    if (!rect) {
-      setBackgroundMenuPosition(null);
-      onToggleMenu("background");
-      return;
-    }
-
-    setBackgroundMenuPosition({
-      left: rect.right + 12,
-      top: rect.top + rect.height / 2
-    });
-    onToggleMenu("background");
-  }
-
-  function closeBackgroundMenu() {
-    setBackgroundMenuPosition(null);
-    onToggleMenu("background");
-  }
   return (
     <>
       {isToolsPanelOpen ? <button type="button" className="tools-drawer-backdrop" aria-label={t("toolbar.closeTools")} onClick={onCloseToolsPanel} /> : null}
@@ -191,6 +175,30 @@ export function WorkbookSidebar({
       <header className={`top-toolbar ${isToolsPanelOpen ? "top-toolbar-open" : ""}`}>
         <div className="top-toolbar-inner">
 
+          <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
+            <p className="sidebar-block-label">{t("toolbar.pencilColor")}</p>
+
+            <div className="toolbar-color-row">
+              <span className="toolbar-color-icon" title={t("toolbar.textColor")} aria-label={t("toolbar.textColor")}>
+                <span className="toolbar-color-icon-letter" aria-hidden="true">A</span>
+                <span className="toolbar-color-icon-bar" style={{backgroundColor: activeColor}} aria-hidden="true" />
+              </span>
+              {colorOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`canvas-quick-action canvas-text-color-chip${activeColor === option.value ? " canvas-text-color-chip-active" : ""}`}
+                  style={{"--swatch-color": option.value} as ReactCSSProperties}
+                  aria-label={option.label}
+                  title={option.label}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onApplyActiveColor(option.value)}
+                >
+                  <span className="canvas-text-color-sample" style={{backgroundColor: option.value}} />
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact" aria-label={t("toolbar.tools")}>
             <p className="sidebar-block-label">{t("toolbar.tools")}</p>
@@ -214,6 +222,25 @@ export function WorkbookSidebar({
                 onClick={() => onToggleAdvancedToolMode("draw")}
               >
                 ✎
+              </button>
+              <button
+                type="button"
+                className={`toolbar-shortcut toolbar-shortcut-text ${pendingInsertTool?.kind === "text" ? "toolbar-shortcut-active" : ""}`}
+                title={t("toolbar.text")}
+                aria-label={t("toolbar.text")}
+                aria-pressed={pendingInsertTool?.kind === "text"}
+                draggable
+                onDragStart={onTextToolDragStart}
+                onDragEnd={onToolDragEnd}
+                onClick={() => {
+                  if (shouldIgnoreToolbarClick()) {
+                    return;
+                  }
+
+                  onTogglePendingTextTool();
+                }}
+              >
+                <span aria-hidden="true" className="toolbar-text-button-initial">T</span>exte
               </button>
               <div className="toolbar-highlight-shell">
                 <button
@@ -270,81 +297,40 @@ export function WorkbookSidebar({
             </div>
           </div>
 
+          {pendingInsertTool?.kind === "text" ? (
           <div className={`toolbar-row toolbar-row-secondary toolbar-row-format sidebar-block sidebar-block-compact${isElementMenuVisible ? " toolbar-row-disabled" : ""}`} aria-label={t("toolbar.formatting")} aria-disabled={isElementMenuVisible}>
-            <p className="sidebar-block-label">{t("toolbar.defaultStyle")}</p>
+            <p className="sidebar-block-label">{t("toolbar.formatting")}</p>
 
             <div className="toolbar-color-row">
-              <button
-                ref={backgroundButtonRef}
-                type="button"
-                className={`canvas-quick-action canvas-text-highlight-chip${openMenu === "background" ? " canvas-text-highlight-chip-active" : ""}`}
-                title={t("toolbar.backgroundColor")}
-                aria-label={t("toolbar.backgroundColor")}
-                aria-expanded={openMenu === "background"}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={openBackgroundMenu}
-              >
+              <span className="toolbar-color-icon" title={t("toolbar.backgroundColor")} aria-label={t("toolbar.backgroundColor")}>
                 <svg viewBox="0 0 16 14" width="16" height="14" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
                   <rect x="1" y="1" width="14" height="12" rx="2" />
-                  <rect x="3" y="3" width="10" height="8" rx="1" fill={activeHighlightColor ?? "none"} stroke={activeHighlightColor ? "none" : "currentColor"} strokeWidth="0.8" strokeDasharray="2 1.2" />
+                  <rect x="3" y="3" width="10" height="8" rx="1" fill={selectedHighlightColor ?? "none"} stroke={selectedHighlightColor ? "none" : "currentColor"} strokeWidth="0.8" strokeDasharray="2 1.2" />
                 </svg>
-              </button>
-              <span className="toolbar-color-icon" title={t("toolbar.textColor")} aria-label={t("toolbar.textColor")}>
-                <span className="toolbar-color-icon-letter" aria-hidden="true">A</span>
-                <span className="toolbar-color-icon-bar" style={{backgroundColor: activeColor}} aria-hidden="true" />
               </span>
-              {colorOptions.map((option) => (
+              <button
+                type="button"
+                className={`canvas-quick-action canvas-text-highlight-chip ${!selectedHighlightColor ? "canvas-text-highlight-chip-active" : ""}`}
+                title={t("toolbar.noBackground")}
+                aria-label={t("toolbar.noBackground")}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onApplyActiveHighlightColor("")}
+              >
+                <span className="canvas-text-highlight-sample" />
+              </button>
+              {highlightOptions.filter((option) => option.value).map((option) => (
                 <button
                   key={option.id}
                   type="button"
-                  className={`canvas-quick-action canvas-text-color-chip${activeColor === option.value ? " canvas-text-color-chip-active" : ""}`}
-                  style={{"--swatch-color": option.value} as ReactCSSProperties}
+                  className={`canvas-quick-action canvas-text-highlight-chip ${(option.value || null) === selectedHighlightColor ? "canvas-text-highlight-chip-active" : ""}`}
                   aria-label={option.label}
                   title={option.label}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => onApplyActiveColor(option.value)}
+                  onClick={() => onApplyActiveHighlightColor((option.value || null) === selectedHighlightColor ? "" : option.value)}
                 >
-                  <span className="canvas-text-color-sample" style={{backgroundColor: option.value}} />
+                  <span className="canvas-text-highlight-sample" style={{backgroundColor: option.value}} />
                 </button>
               ))}
-              {openMenu === "background" ? createPortal(
-                <div className="toolbar-highlight-backdrop" onMouseDown={closeBackgroundMenu}>
-                  <div
-                    className="toolbar-highlight-panel toolbar-highlight-portal toolbar-background-portal"
-                    role="menu"
-                    aria-label={t("toolbar.backgroundColor")}
-                    onMouseDown={(event) => event.stopPropagation()}
-                    style={backgroundMenuPosition ? {left: `${backgroundMenuPosition.left}px`, top: `${backgroundMenuPosition.top}px`} : undefined}
-                  >
-                    <button
-                      type="button"
-                      className={`toolbar-highlight-swatch toolbar-highlight-swatch-clear ${activeHighlightColor === null ? "toolbar-highlight-swatch-active toolbar-highlight-swatch-color" : ""}`}
-                      aria-label={t("toolbar.noBackground")}
-                      title={t("toolbar.noBackground")}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => onApplyActiveHighlightColor("")}
-                      style={activeHighlightColor === null ? {borderColor: "var(--accent)", boxShadow: "inset 0 0 0 2px var(--accent)"} : undefined}
-                    >
-                      <span className="toolbar-highlight-swatch-sample" />
-                    </button>
-                    {highlightOptions.filter((option) => option.value).map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`toolbar-highlight-swatch ${option.value === activeHighlightColor ? "toolbar-highlight-swatch-active toolbar-highlight-swatch-color" : ""}`}
-                        aria-label={option.label}
-                        title={option.label}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => onApplyActiveHighlightColor(option.value)}
-                        style={option.value === activeHighlightColor ? {borderColor: option.value, boxShadow: `inset 0 0 0 2px ${option.value}`} : undefined}
-                      >
-                        <span className="toolbar-highlight-swatch-sample" style={{backgroundColor: option.value}} />
-                      </button>
-                    ))}
-                  </div>
-                </div>,
-                document.body
-              ) : null}
             </div>
 
             <div className="toolbar-color-row">
@@ -364,7 +350,25 @@ export function WorkbookSidebar({
                 A+
               </button>
             </div>
+
+            <div className="toolbar-style-preview">
+              <p className="toolbar-style-preview-label">{t("toolbar.stylePreview")}</p>
+              <p
+                className="toolbar-style-preview-sample"
+                style={{
+                  color: activeColor,
+                  backgroundColor: selectedHighlightColor ?? "transparent",
+                  fontSize: `${activeFontSize}rem`,
+                  fontWeight: activeFontWeight,
+                  fontStyle: activeFontStyle,
+                  textDecoration: activeUnderline ? "underline" : "none"
+                }}
+              >
+                {t("toolbar.text")}
+              </p>
+            </div>
           </div>
+          ) : null}
 
           <div className="toolbar-row toolbar-row-secondary sidebar-block sidebar-block-compact">
             <p className="sidebar-block-label">{t("toolbar.geometry")}</p>

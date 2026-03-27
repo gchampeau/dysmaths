@@ -6,7 +6,7 @@ import {type AppLocale} from "@/i18n/routing";
 export type StudyMode = "middleSchool" | "highSchool";
 export type SheetStyle = "seyes" | "large-grid" | "small-grid" | "lined" | "blank";
 export type StructuredTool = "fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root";
-export type UtilityMenu = "highlight" | "background" | "settings" | "install" | null;
+export type UtilityMenu = "highlight" | "settings" | "install" | null;
 export type GeometryTool = "point" | "segment" | "line" | "ray" | "circle" | "measure" | "protractor" | "compass";
 
 export type FractionBlock = {
@@ -266,6 +266,7 @@ export type WriterState = {
   sheetStyle: SheetStyle;
   activeColor: string;
   activeHighlightColor: string | null;
+  activeFontSize: number;
   activeFontWeight: number;
   activeFontStyle: "normal" | "italic";
   activeUnderline: boolean;
@@ -348,6 +349,7 @@ export type PendingSelection = {
 } | null;
 
 export type ToolbarDragPayload =
+  | { kind: "text" }
   | { kind: "structured"; toolId: StructuredTool }
   | { kind: "shortcut"; shortcutId: string };
 
@@ -725,7 +727,8 @@ export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: Def
     mode: "middleSchool",
     sheetStyle,
     activeColor: DEFAULT_ACTIVE_COLOR,
-    activeHighlightColor: "rgba(255, 226, 92, 0.58)",
+    activeHighlightColor: null,
+    activeFontSize: getDefaultCanvasFontSize(sheetStyle),
     activeFontWeight: 500,
     activeFontStyle: "normal",
     activeUnderline: false,
@@ -1899,6 +1902,10 @@ export function parseStoredState(raw: string, fallbackSheetStyle: SheetStyle, la
         typeof (parsed as { activeHighlightColor?: unknown }).activeHighlightColor === "string"
           ? parsed.activeHighlightColor
           : defaultState.activeHighlightColor,
+      activeFontSize:
+        typeof (parsed as { activeFontSize?: unknown }).activeFontSize === "number"
+          ? parsed.activeFontSize
+          : defaultState.activeFontSize,
       activeFontWeight: typeof (parsed as { activeFontWeight?: unknown }).activeFontWeight === "number" ? parsed.activeFontWeight : 500,
       activeFontStyle: (parsed as { activeFontStyle?: unknown }).activeFontStyle === "italic" ? "italic" : "normal",
       activeUnderline: typeof (parsed as { activeUnderline?: unknown }).activeUnderline === "boolean" ? parsed.activeUnderline : false,
