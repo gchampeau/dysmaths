@@ -566,6 +566,8 @@ export type HeaderFieldPosition = {
   y: number;
 };
 
+export type FontOption = "default" | "opendyslexic";
+
 export type UserProfile = {
   id: string;
   firstName: string;
@@ -573,6 +575,7 @@ export type UserProfile = {
   className: string;
   preferredSheetStyle: SheetStyle;
   preferredMode: StudyMode;
+  preferredFont: FontOption;
   showName: boolean;
   showClass: boolean;
   showDate: boolean;
@@ -605,6 +608,7 @@ export function parseStoredProfiles(raw: string): ProfileStore | null {
       )
       .map((p): UserProfile => ({
         ...p,
+        preferredFont: (p as { preferredFont?: unknown }).preferredFont === "opendyslexic" ? "opendyslexic" : "default",
         showName: typeof p.showName === "boolean" ? p.showName : true,
         showClass: typeof p.showClass === "boolean" ? p.showClass : true,
         showDate: typeof p.showDate === "boolean" ? p.showDate : true,
@@ -1056,28 +1060,43 @@ export function renderIntegralSymbolSvg(size: number) {
   );
 }
 
-let _textMeasureCtx: CanvasRenderingContext2D | null = null;
-function getTextMeasureCtx(): CanvasRenderingContext2D | null {
+const FONT_STACKS: Record<FontOption, string> = {
+  default: '"Segoe UI", "Candara", "Trebuchet MS", sans-serif',
+  opendyslexic: '"OpenDyslexic", sans-serif'
+};
+
+let _textMeasureEl: HTMLSpanElement | null = null;
+
+function getTextMeasureEl(): HTMLSpanElement | null {
   if (typeof document === "undefined") return null;
-  if (!_textMeasureCtx) _textMeasureCtx = document.createElement("canvas").getContext("2d");
-  return _textMeasureCtx;
+  if (!_textMeasureEl) {
+    _textMeasureEl = document.createElement("span");
+    _textMeasureEl.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;pointer-events:none;left:-9999px;top:-9999px;";
+    document.body.appendChild(_textMeasureEl);
+  }
+  return _textMeasureEl;
 }
 
-export function getTextBoxWidth(text: string, fontSizeRem = DEFAULT_CANVAS_FONT_SIZE_REM) {
-  const lines = text.split("\n");
-  const ctx = getTextMeasureCtx();
+export function getTextBoxWidth(text: string, fontSizeRem = DEFAULT_CANVAS_FONT_SIZE_REM, font: FontOption = "default") {
+  const el = getTextMeasureEl();
   let maxPx = 0;
-  if (ctx) {
+
+  if (el) {
     const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    ctx.font = `500 ${fontSizeRem * rootPx}px "Segoe UI", "Candara", "Trebuchet MS", sans-serif`;
-    for (const line of lines) {
-      const w = ctx.measureText(line.trim()).width;
+    el.style.font = `500 ${fontSizeRem * rootPx}px ${FONT_STACKS[font]}`;
+
+    for (const line of text.split("\n")) {
+      el.textContent = line.trim() || "\u00A0";
+      const w = el.getBoundingClientRect().width;
       if (w > maxPx) maxPx = w;
     }
+
+    el.textContent = "";
   } else {
-    const longest = lines.reduce((a, b) => (a.length > b.length ? a : b), "");
+    const longest = text.split("\n").reduce((a, b) => (a.length > b.length ? a : b), "");
     maxPx = longest.trim().length * fontSizeRem * 9;
   }
+
   const min = text.trim() ? 36 : 100;
   return Math.max(min, Math.min(920, Math.ceil(maxPx) + 12));
 }

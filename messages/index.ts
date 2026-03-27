@@ -160,6 +160,9 @@ type Messages = {
       showClass: string;
       showDate: string;
       highlightOnHover: string;
+      preferredFont: string;
+      fontDefault: string;
+      fontOpenDyslexic: string;
     };
   };
 };
@@ -394,7 +397,10 @@ const en: Messages = {
       showName: "Name",
       showClass: "Class",
       showDate: "Date",
-      highlightOnHover: "Highlight elements on hover"
+      highlightOnHover: "Highlight elements on hover",
+      preferredFont: "Font",
+      fontDefault: "Default",
+      fontOpenDyslexic: "OpenDyslexic"
     }
   }
 };
@@ -629,7 +635,10 @@ const fr: Messages = {
       showName: "Nom",
       showClass: "Classe",
       showDate: "Date",
-      highlightOnHover: "Encadrer les éléments au survol"
+      highlightOnHover: "Encadrer les éléments au survol",
+      preferredFont: "Police",
+      fontDefault: "Par défaut",
+      fontOpenDyslexic: "OpenDyslexic"
     }
   }
 };
@@ -864,7 +873,10 @@ const es: Messages = {
       showName: "Nombre",
       showClass: "Clase",
       showDate: "Fecha",
-      highlightOnHover: "Resaltar elementos al pasar el ratón"
+      highlightOnHover: "Resaltar elementos al pasar el ratón",
+      preferredFont: "Fuente",
+      fontDefault: "Predeterminada",
+      fontOpenDyslexic: "OpenDyslexic"
     }
   }
 };

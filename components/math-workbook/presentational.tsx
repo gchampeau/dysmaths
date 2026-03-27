@@ -30,6 +30,7 @@ import {
   type AdditionBlock,
   type CanvasQuickMenu,
   type ConfirmResetState,
+  type FontOption,
   type GeometryShape,
   type GeometryTool,
   type GeometryToolOption,
@@ -1502,6 +1503,7 @@ export function ProfileModal({ t, mode, profile, sheetStyleOptions, onSave, onCl
   const [showClass, setShowClass] = useState(profile?.showClass ?? true);
   const [showDate, setShowDate] = useState(profile?.showDate ?? true);
   const [highlightOnHover, setHighlightOnHover] = useState(profile?.highlightOnHover ?? true);
+  const [preferredFont, setPreferredFont] = useState<FontOption>(profile?.preferredFont ?? "default");
 
   if (!mode) {
     return null;
@@ -1518,6 +1520,7 @@ export function ProfileModal({ t, mode, profile, sheetStyleOptions, onSave, onCl
       className: className.trim(),
       preferredSheetStyle: sheetStyle,
       preferredMode: studyMode,
+      preferredFont,
       showName,
       showClass,
       showDate,
@@ -1567,6 +1570,13 @@ export function ProfileModal({ t, mode, profile, sheetStyleOptions, onSave, onCl
             <select className="sheet-style-select" value={studyMode} onChange={(event) => setStudyMode(event.target.value as StudyMode)}>
               <option value="middleSchool">{t("profile.middleSchool")}</option>
               <option value="highSchool">{t("profile.highSchool")}</option>
+            </select>
+          </label>
+          <label className="profile-modal-field">
+            <span>{t("profile.preferredFont")}</span>
+            <select className="sheet-style-select" value={preferredFont} onChange={(event) => setPreferredFont(event.target.value as FontOption)}>
+              <option value="default">{t("profile.fontDefault")}</option>
+              <option value="opendyslexic">{t("profile.fontOpenDyslexic")}</option>
             </select>
           </label>
           <fieldset className="profile-modal-fieldset">

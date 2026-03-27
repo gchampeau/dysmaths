@@ -308,6 +308,7 @@ export function MathWorkbook() {
     () => profileStore.profiles.find((p) => p.id === profileStore.activeProfileId) ?? null,
     [profileStore]
   );
+  const activeFont = activeProfile?.preferredFont ?? "default";
   const editorRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef<Range | null>(null);
@@ -1739,7 +1740,7 @@ export function MathWorkbook() {
     return {
       ...createFloatingTextBox(x, y, "default", "angle"),
       text: initialText,
-      width: getTextBoxWidth(initialText, getDefaultCanvasFontSize(state.sheetStyle))
+      width: getTextBoxWidth(initialText, getDefaultCanvasFontSize(state.sheetStyle), activeFont)
     } satisfies FloatingTextBox;
   }
 
@@ -3023,7 +3024,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         mode === "exact" ? getExactTextBoxVerticalOffset("default") : FLOATING_TEXTBOX_Y_OFFSET
       ),
       text: initialText,
-      width: getTextBoxWidth(initialText, getDefaultCanvasFontSize(state.sheetStyle))
+      width: getTextBoxWidth(initialText, getDefaultCanvasFontSize(state.sheetStyle), activeFont)
     };
     beginTransientHistorySession("edit");
 
@@ -3390,7 +3391,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
     updateTextBox(textBoxId, {
       text: nextText,
-      width: Math.max(minimumWidth, getTextBoxWidth(nextText, currentTextBox.fontSize))
+      width: Math.max(minimumWidth, getTextBoxWidth(nextText, currentTextBox.fontSize, activeFont))
     });
 
     window.requestAnimationFrame(() => {
@@ -3707,7 +3708,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               return {
                 ...textBox,
                 fontSize: nextFontSize,
-                width: Math.max(minimumWidth, getTextBoxWidth(textBox.text || " ", nextFontSize))
+                width: Math.max(minimumWidth, getTextBoxWidth(textBox.text || " ", nextFontSize, activeFont))
               };
             })()
           : textBox
@@ -4878,23 +4879,39 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
   function applyProfileToDocument(profile: UserProfile) {
     const labels = getDocumentLabelsForProfile(profile, workbookUi.defaultDocumentLabels, locale);
+    const font = profile.preferredFont ?? "default";
 
-    setState((current) => {
-      const textBoxes = [...current.textBoxes];
+    function applyWithFont() {
+      setState((current) => {
+        const textBoxes = current.textBoxes.map((tb, index) => {
+          const isHeader = index < 3;
+          const updatedTb = isHeader
+            ? {
+                ...tb,
+                text: index === 0 ? labels.fullName : index === 1 ? labels.className : labels.date,
+                hidden: index === 0 ? !profile.showName : index === 1 ? !profile.showClass : !profile.showDate
+              }
+            : { ...tb };
 
-      if (textBoxes.length >= 3) {
-        textBoxes[0] = { ...textBoxes[0], text: labels.fullName, width: getTextBoxWidth(labels.fullName, textBoxes[0].fontSize), hidden: !profile.showName };
-        textBoxes[1] = { ...textBoxes[1], text: labels.className, width: getTextBoxWidth(labels.className, textBoxes[1].fontSize), hidden: !profile.showClass };
-        textBoxes[2] = { ...textBoxes[2], text: labels.date, width: getTextBoxWidth(labels.date, textBoxes[2].fontSize), hidden: !profile.showDate };
-      }
+          updatedTb.width = getTextBoxWidth(updatedTb.text || " ", updatedTb.fontSize, font);
 
-      return {
-        ...current,
-        textBoxes: applyHeaderPositions(textBoxes, profile),
-        sheetStyle: profile.preferredSheetStyle,
-        mode: profile.preferredMode
-      };
-    });
+          return updatedTb;
+        });
+
+        return {
+          ...current,
+          textBoxes: applyHeaderPositions(textBoxes, profile),
+          sheetStyle: profile.preferredSheetStyle,
+          mode: profile.preferredMode
+        };
+      });
+    }
+
+    if (font === "opendyslexic" && typeof document !== "undefined" && document.fonts) {
+      document.fonts.load('500 16px "OpenDyslexic"').then(() => applyWithFont()).catch(() => applyWithFont());
+    } else {
+      applyWithFont();
+    }
   }
 
   function handleProfileChange(profileId: string | null) {
@@ -4925,11 +4942,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     }));
 
     if (profileStore.activeProfileId === updated.id) {
-      setState((current) => ({
-        ...current,
-        sheetStyle: updated.preferredSheetStyle,
-        mode: updated.preferredMode
-      }));
+      applyProfileToDocument(updated);
     }
 
     setProfileEditMode(null);
@@ -5267,7 +5280,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           <div className="document-canvas-viewport">
             <div className="document-canvas-stage">
               <div
-                className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || activeGeometryTool ? "document-canvas-draw-mode" : ""} ${advancedTool === "highlight" ? "document-canvas-highlight-mode" : ""} ${activeGeometryTool === "protractor" ? "document-canvas-protractor-mode" : ""} ${pendingInsertTool ? "document-canvas-insert-mode" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || advancedTool === "select" || advancedTool === "move" || pendingInsertTool || activeGeometryTool ? "document-canvas-touch-locked" : ""} ${(activeProfile?.highlightOnHover ?? true) ? "document-canvas-hover-highlight" : ""}`}
+                className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || activeGeometryTool ? "document-canvas-draw-mode" : ""} ${advancedTool === "highlight" ? "document-canvas-highlight-mode" : ""} ${activeGeometryTool === "protractor" ? "document-canvas-protractor-mode" : ""} ${pendingInsertTool ? "document-canvas-insert-mode" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || advancedTool === "select" || advancedTool === "move" || pendingInsertTool || activeGeometryTool ? "document-canvas-touch-locked" : ""} ${(activeProfile?.highlightOnHover ?? true) ? "document-canvas-hover-highlight" : ""} ${activeProfile?.preferredFont === "opendyslexic" ? "document-canvas-font-opendyslexic" : ""}`}
                 style={{ "--canvas-type-size": `${getDefaultCanvasFontSize(state.sheetStyle)}rem` } as ReactCSSProperties}
                 ref={canvasRef}
                 data-testid="document-canvas"
@@ -5576,7 +5589,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
                   updateTextBox(textBox.id, {
                     text: nextText,
-                    width: Math.max(minimumWidth, getTextBoxWidth(nextText, textBox.fontSize))
+                    width: Math.max(minimumWidth, getTextBoxWidth(nextText, textBox.fontSize, activeFont))
                   });
                 }}
                 onSubmit={() => {
@@ -5592,7 +5605,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
                   updateTextBox(textBox.id, {
                     text: value.trim(),
-                    width: Math.max(textBox.variant === "note" ? 56 : 36, getTextBoxWidth(value, textBox.fontSize))
+                    width: Math.max(textBox.variant === "note" ? 56 : 36, getTextBoxWidth(value, textBox.fontSize, activeFont))
                   });
                   setEditingTextBoxId(null);
                   clearFloatingSelection();
