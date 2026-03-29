@@ -288,7 +288,7 @@ describe("document-store (pages)", () => {
       exportPageToFile(meta, state);
 
       expect(saveAs).toHaveBeenCalledTimes(1);
-      const [blob, fileName] = (saveAs as ReturnType<typeof vi.fn>).mock.calls[0];
+      const [blob, fileName] = (saveAs as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
       expect(blob).toBeInstanceOf(Blob);
       expect(fileName).toBe("Export-Test.dysmaths");
     });
