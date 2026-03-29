@@ -16,6 +16,7 @@ import {
   useState
 } from "react";
 import {useLocale, useTranslations} from "next-intl";
+import Image from "next/image";
 import {toBlob} from "html-to-image";
 import {type AppLocale} from "@/i18n/routing";
 import {usePathname, useRouter} from "@/i18n/navigation";
@@ -58,6 +59,7 @@ import {
 } from "@/components/math-workbook/document-store";
 import type {
   StudyMode,
+  ImportedSheetBackground,
   SheetStyle,
   StructuredTool,
   UtilityMenu,
@@ -262,6 +264,337 @@ import {
   isBlockEmpty
 } from "@/components/math-workbook/shared";
 
+const IMPORTED_SHEET_EXPORT_WIDTH = 1400;
+const IMPORTED_SHEET_EXPORT_HEIGHT = 1980;
+
+type PdfImportPage = {
+  getViewport: (params: {scale: number}) => {width: number; height: number};
+  render: (params: {canvasContext: CanvasRenderingContext2D; viewport: {width: number; height: number}}) => {promise: Promise<void>};
+  cleanup?: () => void;
+};
+
+type PdfImportDocument = {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<PdfImportPage>;
+  cleanup?: () => void;
+  destroy?: () => Promise<void> | void;
+};
+
+type PdfImportModalState = {
+  fileName: string;
+  pageCount: number;
+  currentPage: number;
+  previewDataUrl: string | null;
+  isRendering: boolean;
+  error: string | null;
+};
+
+type PdfJsModule = {
+  GlobalWorkerOptions: {workerSrc: string};
+  getDocument: (source: {data: Uint8Array}) => {promise: Promise<PdfImportDocument>};
+};
+
+let pdfJsModulePromise: Promise<PdfJsModule> | null = null;
+
+function ensurePdfJsPolyfills() {
+  if (!globalThis.Promise.withResolvers) {
+    globalThis.Promise.withResolvers = function withResolvers<T>() {
+      let resolve!: (value: T | PromiseLike<T>) => void;
+      let reject!: (reason?: unknown) => void;
+      const promise = new Promise<T>((innerResolve, innerReject) => {
+        resolve = innerResolve;
+        reject = innerReject;
+      });
+
+      return {promise, resolve, reject};
+    };
+  }
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!("DOMMatrix" in globalThis)) {
+    class SimpleDOMMatrix {
+      a: number;
+      b: number;
+      c: number;
+      d: number;
+      e: number;
+      f: number;
+      is2D = true;
+      isIdentity = true;
+      m11: number;
+      m12: number;
+      m13: number;
+      m14: number;
+      m21: number;
+      m22: number;
+      m23: number;
+      m24: number;
+      m31: number;
+      m32: number;
+      m33: number;
+      m34: number;
+      m41: number;
+      m42: number;
+      m43: number;
+      m44: number;
+
+      constructor(init?: number[]) {
+        const [a, b, c, d, e, f] = Array.isArray(init) && init.length >= 6 ? init : [1, 0, 0, 1, 0, 0];
+        this.a = a;
+        this.b = b;
+        this.c = c;
+        this.d = d;
+        this.e = e;
+        this.f = f;
+        this.m11 = a;
+        this.m12 = b;
+        this.m13 = 0;
+        this.m14 = 0;
+        this.m21 = c;
+        this.m22 = d;
+        this.m23 = 0;
+        this.m24 = 0;
+        this.m31 = 0;
+        this.m32 = 0;
+        this.m33 = 1;
+        this.m34 = 0;
+        this.m41 = e;
+        this.m42 = f;
+        this.m43 = 0;
+        this.m44 = 1;
+        this.#syncFlags();
+      }
+
+      #syncFields() {
+        this.m11 = this.a;
+        this.m12 = this.b;
+        this.m21 = this.c;
+        this.m22 = this.d;
+        this.m41 = this.e;
+        this.m42 = this.f;
+        this.#syncFlags();
+      }
+
+      #syncFlags() {
+        this.isIdentity = this.a === 1 && this.b === 0 && this.c === 0 && this.d === 1 && this.e === 0 && this.f === 0;
+      }
+
+      multiplySelf(other: SimpleDOMMatrix) {
+        const a = this.a * other.a + this.c * other.b;
+        const b = this.b * other.a + this.d * other.b;
+        const c = this.a * other.c + this.c * other.d;
+        const d = this.b * other.c + this.d * other.d;
+        const e = this.a * other.e + this.c * other.f + this.e;
+        const f = this.b * other.e + this.d * other.f + this.f;
+        this.a = a;
+        this.b = b;
+        this.c = c;
+        this.d = d;
+        this.e = e;
+        this.f = f;
+        this.#syncFields();
+        return this;
+      }
+
+      preMultiplySelf(other: SimpleDOMMatrix) {
+        return this.multiplySelf(new SimpleDOMMatrix([other.a, other.b, other.c, other.d, other.e, other.f]));
+      }
+
+      translate(x = 0, y = 0) {
+        return this.translateSelf(x, y);
+      }
+
+      translateSelf(x = 0, y = 0) {
+        this.e += x;
+        this.f += y;
+        this.#syncFields();
+        return this;
+      }
+
+      scale(scaleX = 1, scaleY = scaleX) {
+        return this.scaleSelf(scaleX, scaleY);
+      }
+
+      scaleSelf(scaleX = 1, scaleY = scaleX) {
+        this.a *= scaleX;
+        this.b *= scaleX;
+        this.c *= scaleY;
+        this.d *= scaleY;
+        this.#syncFields();
+        return this;
+      }
+
+      invertSelf() {
+        const determinant = this.a * this.d - this.b * this.c;
+
+        if (!determinant) {
+          this.a = Number.NaN;
+          this.b = Number.NaN;
+          this.c = Number.NaN;
+          this.d = Number.NaN;
+          this.e = Number.NaN;
+          this.f = Number.NaN;
+          this.#syncFields();
+          return this;
+        }
+
+        const a = this.d / determinant;
+        const b = -this.b / determinant;
+        const c = -this.c / determinant;
+        const d = this.a / determinant;
+        const e = (this.c * this.f - this.d * this.e) / determinant;
+        const f = (this.b * this.e - this.a * this.f) / determinant;
+        this.a = a;
+        this.b = b;
+        this.c = c;
+        this.d = d;
+        this.e = e;
+        this.f = f;
+        this.#syncFields();
+        return this;
+      }
+    }
+
+    Object.defineProperty(globalThis, "DOMMatrix", {
+      value: SimpleDOMMatrix,
+      configurable: true,
+      writable: true
+    });
+  }
+
+  if (!("ImageData" in globalThis) && "ImageData" in window) {
+    Object.defineProperty(globalThis, "ImageData", {
+      value: window.ImageData,
+      configurable: true,
+      writable: true
+    });
+  }
+
+  if (!("Path2D" in globalThis) && "Path2D" in window) {
+    Object.defineProperty(globalThis, "Path2D", {
+      value: window.Path2D,
+      configurable: true,
+      writable: true
+    });
+  }
+}
+
+function loadPdfJsModule() {
+  if (!pdfJsModulePromise) {
+    ensurePdfJsPolyfills();
+    const pdfModuleUrl = "/pdfjs/pdf.mjs";
+    pdfJsModulePromise = import(/* webpackIgnore: true */ pdfModuleUrl).then((module) => {
+      const pdfjs = module as unknown as PdfJsModule;
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.mjs";
+      return pdfjs;
+    });
+  }
+
+  return pdfJsModulePromise;
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("file-read-error"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsArrayBuffer(file: File) {
+  return new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error("file-read-error"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function loadImageElement(source: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("image-load-error"));
+    image.src = source;
+  });
+}
+
+function drawSourceIntoA4Canvas(width: number, height: number, draw: (context: CanvasRenderingContext2D, width: number, height: number) => void) {
+  const canvas = document.createElement("canvas");
+  canvas.width = IMPORTED_SHEET_EXPORT_WIDTH;
+  canvas.height = IMPORTED_SHEET_EXPORT_HEIGHT;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("canvas-context-error");
+  }
+
+  context.fillStyle = "#fffdf9";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const scale = Math.min(canvas.width / width, canvas.height / height);
+  const renderedWidth = width * scale;
+  const renderedHeight = height * scale;
+  const offsetX = (canvas.width - renderedWidth) / 2;
+  const offsetY = (canvas.height - renderedHeight) / 2;
+
+  context.save();
+  context.translate(offsetX, offsetY);
+  context.scale(scale, scale);
+  draw(context, width, height);
+  context.restore();
+
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+async function buildImportedImageBackground(file: File): Promise<ImportedSheetBackground> {
+  const source = await readFileAsDataUrl(file);
+  const image = await loadImageElement(source);
+  const dataUrl = drawSourceIntoA4Canvas(image.naturalWidth, image.naturalHeight, (context, width, height) => {
+    context.drawImage(image, 0, 0, width, height);
+  });
+
+  return {
+    dataUrl,
+    mimeType: "image/jpeg",
+    sourceName: file.name,
+    sourceKind: "image",
+    pageNumber: null
+  };
+}
+
+async function renderPdfPageToDataUrl(documentProxy: PdfImportDocument, pageNumber: number) {
+  const page = await documentProxy.getPage(pageNumber);
+
+  try {
+    const viewport = page.getViewport({scale: 1});
+    const canvas = document.createElement("canvas");
+    const scale = Math.min(IMPORTED_SHEET_EXPORT_WIDTH / viewport.width, IMPORTED_SHEET_EXPORT_HEIGHT / viewport.height);
+    const scaledViewport = page.getViewport({scale});
+    canvas.width = Math.max(1, Math.round(scaledViewport.width));
+    canvas.height = Math.max(1, Math.round(scaledViewport.height));
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("canvas-context-error");
+    }
+
+    context.fillStyle = "#fffdf9";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({canvasContext: context, viewport: scaledViewport}).promise;
+
+    return drawSourceIntoA4Canvas(canvas.width, canvas.height, (targetContext, width, height) => {
+      targetContext.drawImage(canvas, 0, 0, width, height);
+    });
+  } finally {
+    page.cleanup?.();
+  }
+}
+
 export function MathWorkbook() {
   const t = useTranslations("Workbook");
   const locale = useLocale() as AppLocale;
@@ -316,6 +649,9 @@ export function MathWorkbook() {
   const [pageIndex, setPageIndex] = useState<PageIndex>({ version: 1, activePageId: null, pages: [] });
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sheetImportInputRef = useRef<HTMLInputElement>(null);
+  const pdfImportDocumentRef = useRef<PdfImportDocument | null>(null);
+  const [pdfImportModalState, setPdfImportModalState] = useState<PdfImportModalState | null>(null);
   const activeProfile = useMemo(
     () => profileStore.profiles.find((p) => p.id === profileStore.activeProfileId) ?? null,
     [profileStore]
@@ -368,6 +704,64 @@ export function MathWorkbook() {
   const strokeNodeRefs = useRef<Record<string, SVGGElement | null>>({});
   const geometryNodeRefs = useRef<Record<string, SVGGElement | null>>({});
   const pendingFocusTextBoxIdRef = useRef<string | null>(null);
+  const pendingSheetImportFallbackRef = useRef<SheetStyle | null>(null);
+  const pdfImportCurrentPage = pdfImportModalState?.currentPage ?? null;
+
+  useEffect(() => {
+    if (pdfImportCurrentPage === null) {
+      return;
+    }
+
+    let cancelled = false;
+    const documentProxy = pdfImportDocumentRef.current;
+
+    if (!documentProxy) {
+      return;
+    }
+
+    setPdfImportModalState((current) => (current ? {...current, isRendering: true, error: null} : current));
+
+    void renderPdfPageToDataUrl(documentProxy, pdfImportCurrentPage)
+      .then((previewDataUrl) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPdfImportModalState((current) => (
+          current
+            ? {
+                ...current,
+                previewDataUrl,
+                isRendering: false,
+                error: null
+              }
+            : current
+        ));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setPdfImportModalState((current) => (
+          current
+            ? {
+                ...current,
+                isRendering: false,
+                error: t("pages.importSheetError")
+              }
+            : current
+        ));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfImportCurrentPage, t]);
+
+  useEffect(() => () => {
+    destroyPdfImportDocument();
+  }, []);
   const blockInputRefs = useRef<Record<string, Record<string, HTMLInputElement | HTMLTextAreaElement | null>>>({});
   const selectedElementMenuRef = useRef<HTMLDivElement | null>(null);
   const selectedGeometryMenuRef = useRef<HTMLDivElement | null>(null);
@@ -5003,6 +5397,120 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     fileInputRef.current?.click();
   }
 
+  function getImportedSheetSummary(background: ImportedSheetBackground | null) {
+    if (!background) {
+      return null;
+    }
+
+    const pageLabel = background.pageNumber ? ` • ${t("pages.importedSheetPage", {page: background.pageNumber})}` : "";
+    return `${t("pages.importedSheetSummary", {name: background.sourceName})}${pageLabel}`;
+  }
+
+  function destroyPdfImportDocument() {
+    const currentDocument = pdfImportDocumentRef.current;
+    pdfImportDocumentRef.current = null;
+
+    if (!currentDocument) {
+      return;
+    }
+
+    currentDocument.cleanup?.();
+    void Promise.resolve(currentDocument.destroy?.()).catch(() => undefined);
+  }
+
+  function closePdfImportModal() {
+    destroyPdfImportDocument();
+    setPdfImportModalState(null);
+
+    const fallbackStyle = pendingSheetImportFallbackRef.current;
+    pendingSheetImportFallbackRef.current = null;
+
+    if (fallbackStyle && state.sheetStyle === "imported" && !state.sheetBackground) {
+      setState((current) => ({...current, sheetStyle: fallbackStyle}));
+    }
+  }
+
+  function handleOpenSheetImport() {
+    pendingSheetImportFallbackRef.current = state.sheetStyle;
+    sheetImportInputRef.current?.click();
+  }
+
+  function applyImportedSheetBackground(background: ImportedSheetBackground) {
+    setState((current) => ({
+      ...current,
+      sheetStyle: "imported",
+      sheetBackground: background
+    }));
+  }
+
+  async function openPdfImportModal(file: File) {
+    const pdfjs = await loadPdfJsModule();
+    const fileBytes = new Uint8Array(await readFileAsArrayBuffer(file));
+    const documentProxy = await pdfjs.getDocument({data: fileBytes}).promise;
+
+    destroyPdfImportDocument();
+    pdfImportDocumentRef.current = documentProxy;
+    setPdfImportModalState({
+      fileName: file.name,
+      pageCount: documentProxy.numPages,
+      currentPage: 1,
+      previewDataUrl: null,
+      isRendering: true,
+      error: null
+    });
+  }
+
+  async function handleSheetImportInputChange(event: ReactChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+        await openPdfImportModal(file);
+        return;
+      }
+
+      const background = await buildImportedImageBackground(file);
+      applyImportedSheetBackground(background);
+    } catch (error) {
+      console.error("Sheet import failed", error);
+      window.alert(t("pages.importSheetError"));
+      const fallbackStyle = pendingSheetImportFallbackRef.current;
+
+      if (fallbackStyle && state.sheetStyle === "imported" && !state.sheetBackground) {
+        setState((current) => ({...current, sheetStyle: fallbackStyle}));
+      }
+    } finally {
+      pendingSheetImportFallbackRef.current = null;
+    }
+  }
+
+  function handleSheetStyleChange(nextStyle: SheetStyle) {
+    if (nextStyle === "imported") {
+      if (state.sheetBackground) {
+        setState((current) => ({...current, sheetStyle: "imported"}));
+        return;
+      }
+
+      handleOpenSheetImport();
+      return;
+    }
+
+    setState((current) => ({...current, sheetStyle: nextStyle}));
+  }
+
+  function handleClearImportedSheetBackground() {
+    setState((current) => ({
+      ...current,
+      sheetBackground: null,
+      sheetStyle: current.sheetStyle === "imported" ? defaultSheetStyle : current.sheetStyle
+    }));
+  }
+
   function handleFileInputChange(event: ReactChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -5180,7 +5688,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setIsExporting("pdf");
 
     try {
-      await exportWorkbookPdf(canvasRef.current, state.sheetStyle, state.title);
+      await exportWorkbookPdf(canvasRef.current, state.sheetStyle, state.title, state.sheetBackground);
     } finally {
       setIsExporting(null);
     }
@@ -5194,7 +5702,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setIsExporting("png");
 
     try {
-      await exportWorkbookPng(canvasRef.current, state.sheetStyle, state.title);
+      await exportWorkbookPng(canvasRef.current, state.sheetStyle, state.title, state.sheetBackground);
     } finally {
       setIsExporting(null);
     }
@@ -5208,7 +5716,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setIsExporting("print");
 
     try {
-      await printWorkbook(canvasRef.current, state.sheetStyle, state.title);
+      await printWorkbook(canvasRef.current, state.sheetStyle, state.title, state.sheetBackground);
     } finally {
       setIsExporting(null);
     }
@@ -5431,6 +5939,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           isExporting={isExporting}
           sheetStyle={state.sheetStyle}
           sheetStyleOptions={workbookUi.sheetStyleOptions}
+          hasImportedSheetBackground={Boolean(state.sheetBackground)}
+          importedSheetSummary={getImportedSheetSummary(state.sheetBackground)}
           pages={pageIndex.pages}
           activePageId={pageIndex.activePageId}
           onOpenTools={() => setIsToolsPanelOpen(true)}
@@ -5439,7 +5949,9 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           onExportPdf={exportPdf}
           onExportPng={exportPng}
           onPrint={printSheet}
-          onSheetStyleChange={(sheetStyle) => setState((current) => ({...current, sheetStyle}))}
+          onSheetStyleChange={handleSheetStyleChange}
+          onImportSheetBackground={handleOpenSheetImport}
+          onClearImportedSheetBackground={handleClearImportedSheetBackground}
           onNewPage={handleNewPage}
           onSwitchPage={handleSwitchPage}
           onDeletePage={handleDeletePage}
@@ -5456,8 +5968,18 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           <div className="document-canvas-viewport">
             <div className="document-canvas-stage">
               <div
-                className={`document-canvas document-canvas-${state.sheetStyle} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || activeGeometryTool ? "document-canvas-draw-mode" : ""} ${advancedTool === "highlight" ? "document-canvas-highlight-mode" : ""} ${activeGeometryTool === "protractor" ? "document-canvas-protractor-mode" : ""} ${pendingInsertTool ? "document-canvas-insert-mode" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || advancedTool === "select" || advancedTool === "move" || pendingInsertTool || activeGeometryTool ? "document-canvas-touch-locked" : ""} ${(activeProfile?.highlightOnHover ?? true) ? "document-canvas-hover-highlight" : ""} ${activeProfile?.preferredFont === "opendyslexic" ? "document-canvas-font-opendyslexic" : ""}`}
-                style={{ "--canvas-type-size": `${getDefaultCanvasFontSize(state.sheetStyle)}rem` } as ReactCSSProperties}
+                className={`document-canvas document-canvas-${state.sheetStyle} ${state.sheetStyle === "imported" && state.sheetBackground ? "document-canvas-imported" : ""} ${isCanvasDropActive ? "document-canvas-drop-active" : ""} ${isCanvasInteracting ? "document-canvas-interacting" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || activeGeometryTool ? "document-canvas-draw-mode" : ""} ${advancedTool === "highlight" ? "document-canvas-highlight-mode" : ""} ${activeGeometryTool === "protractor" ? "document-canvas-protractor-mode" : ""} ${pendingInsertTool ? "document-canvas-insert-mode" : ""} ${advancedTool === "draw" || advancedTool === "highlight" || advancedTool === "graduated-line" || advancedTool === "select" || advancedTool === "move" || pendingInsertTool || activeGeometryTool ? "document-canvas-touch-locked" : ""} ${(activeProfile?.highlightOnHover ?? true) ? "document-canvas-hover-highlight" : ""} ${activeProfile?.preferredFont === "opendyslexic" ? "document-canvas-font-opendyslexic" : ""}`}
+                style={{
+                  "--canvas-type-size": `${getDefaultCanvasFontSize(state.sheetStyle)}rem`,
+                  ...(state.sheetStyle === "imported" && state.sheetBackground
+                    ? {
+                        backgroundImage: `url("${state.sheetBackground.dataUrl}")`,
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: "100% 100%"
+                      }
+                    : {})
+                } as ReactCSSProperties}
                 ref={canvasRef}
                 data-testid="document-canvas"
                 onDragOver={handleCanvasDragOver}
@@ -5974,6 +6496,101 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           </section>
         </div>
       ) : null}
+      {pdfImportModalState ? (
+        <div className="modal-backdrop" role="presentation" onClick={closePdfImportModal}>
+          <section className="block-modal imported-sheet-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-import-title" onClick={(event) => event.stopPropagation()}>
+            <div className="block-modal-head">
+              <div>
+                <h2 id="pdf-import-title">{t("pages.importPdfTitle")}</h2>
+                <p className="imported-sheet-modal-helper">{t("pages.importPdfHelper")}</p>
+                <p className="imported-sheet-modal-meta">
+                  {pdfImportModalState.fileName} • {t("pages.importedSheetPage", {page: pdfImportModalState.currentPage})}/{pdfImportModalState.pageCount}
+                </p>
+              </div>
+              <div className="card-actions">
+                <button type="button" className="small-action" onClick={closePdfImportModal}>
+                  {t("modal.cancel")}
+                </button>
+                <button
+                  type="button"
+                  className="small-action primary-inline-action"
+                  disabled={pdfImportModalState.isRendering || !pdfImportModalState.previewDataUrl}
+                  onClick={() => {
+                    if (!pdfImportModalState.previewDataUrl) {
+                      return;
+                    }
+
+                    applyImportedSheetBackground({
+                      dataUrl: pdfImportModalState.previewDataUrl,
+                      mimeType: "image/jpeg",
+                      sourceName: pdfImportModalState.fileName,
+                      sourceKind: "pdf",
+                      pageNumber: pdfImportModalState.currentPage
+                    });
+                    pendingSheetImportFallbackRef.current = null;
+                    closePdfImportModal();
+                  }}
+                >
+                  {t("pages.importThisPage")}
+                </button>
+              </div>
+            </div>
+            <div className="imported-sheet-modal-preview-shell">
+              <div className="imported-sheet-modal-toolbar">
+                <button
+                  type="button"
+                  className="toolbar-action ghost"
+                  disabled={pdfImportModalState.currentPage <= 1 || pdfImportModalState.isRendering}
+                  onClick={() => setPdfImportModalState((current) => (current ? {...current, currentPage: current.currentPage - 1} : current))}
+                >
+                  {t("pages.previousPage")}
+                </button>
+                <button
+                  type="button"
+                  className="toolbar-action ghost"
+                  disabled={pdfImportModalState.currentPage >= pdfImportModalState.pageCount || pdfImportModalState.isRendering}
+                  onClick={() => setPdfImportModalState((current) => (current ? {...current, currentPage: current.currentPage + 1} : current))}
+                >
+                  {t("pages.nextPage")}
+                </button>
+                <label className="imported-sheet-modal-page-field">
+                  <span>{t("pages.pageNumber")}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={pdfImportModalState.pageCount}
+                    value={pdfImportModalState.currentPage}
+                    onChange={(event) => {
+                      const nextValue = Number.parseInt(event.target.value, 10);
+
+                      if (Number.isNaN(nextValue)) {
+                        return;
+                      }
+
+                      const boundedValue = Math.max(1, Math.min(pdfImportModalState.pageCount, nextValue));
+                      setPdfImportModalState((current) => (current ? {...current, currentPage: boundedValue} : current));
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="imported-sheet-modal-preview">
+                {pdfImportModalState.previewDataUrl ? (
+                  <Image
+                    src={pdfImportModalState.previewDataUrl}
+                    alt={pdfImportModalState.fileName}
+                    className="imported-sheet-modal-image"
+                    width={420}
+                    height={594}
+                    unoptimized
+                  />
+                ) : null}
+                {pdfImportModalState.isRendering ? <p className="imported-sheet-modal-status">{t("pages.loadingPreview")}</p> : null}
+                {pdfImportModalState.error ? <p className="imported-sheet-modal-status imported-sheet-modal-status-error">{pdfImportModalState.error}</p> : null}
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
       <input
         ref={fileInputRef}
         type="file"
@@ -5981,13 +6598,20 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         style={{ display: "none" }}
         onChange={handleFileInputChange}
       />
+      <input
+        ref={sheetImportInputRef}
+        type="file"
+        accept="image/*,.pdf,application/pdf"
+        style={{ display: "none" }}
+        onChange={handleSheetImportInputChange}
+      />
       {profileEditMode ? (
         <ProfileModal
           key={profileEditMode === "edit" ? activeProfile?.id : "__create__"}
           t={t}
           mode={profileEditMode}
           profile={profileEditMode === "edit" ? activeProfile : null}
-          sheetStyleOptions={workbookUi.sheetStyleOptions}
+          sheetStyleOptions={workbookUi.sheetStyleOptions.filter((option) => option.id !== "imported")}
           onSave={(data) => {
             if (profileEditMode === "edit" && activeProfile) {
               handleUpdateProfile({ ...data, id: activeProfile.id });

@@ -161,6 +161,24 @@ describe("document-store (pages)", () => {
       expect(result!.title).toBe("Loaded");
     });
 
+    it("preserves an imported sheet background", () => {
+      const state = makeState({
+        sheetStyle: "imported",
+        sheetBackground: {
+          dataUrl: "data:image/jpeg;base64,abc",
+          mimeType: "image/jpeg",
+          sourceName: "worksheet.pdf",
+          sourceKind: "pdf",
+          pageNumber: 2
+        }
+      });
+      mockStorage.setItem("dysmaths-doc-imported", JSON.stringify(state));
+      const result = loadPageState("imported", "seyes", DEFAULT_LABELS);
+      expect(result?.sheetStyle).toBe("imported");
+      expect(result?.sheetBackground?.sourceName).toBe("worksheet.pdf");
+      expect(result?.sheetBackground?.pageNumber).toBe(2);
+    });
+
     it("returns null for invalid stored state", () => {
       mockStorage.setItem("dysmaths-doc-bad", JSON.stringify({ invalid: true }));
       const result = loadPageState("bad", "seyes", DEFAULT_LABELS);

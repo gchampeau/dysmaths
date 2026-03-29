@@ -1,6 +1,7 @@
 import {toPng} from "html-to-image";
 import {jsPDF} from "jspdf";
 import {
+  type ImportedSheetBackground,
   SEYES_MAJOR_MM,
   SEYES_MINOR_MM,
   SEYES_MARGIN_CM,
@@ -87,7 +88,7 @@ function createExportSheetOverlay(sheetStyle: SheetStyle, width: number, height:
   return overlay;
 }
 
-function createExportCanvasNode(canvasNode: HTMLDivElement, sheetStyle: SheetStyle) {
+function createExportCanvasNode(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, sheetBackground: ImportedSheetBackground | null = null) {
   const exportWidth = Math.max(1, Math.round(canvasNode.offsetWidth));
   const exportHeight = Math.max(1, Math.round(canvasNode.offsetHeight));
   const wrapper = document.createElement("div");
@@ -103,12 +104,21 @@ function createExportCanvasNode(canvasNode: HTMLDivElement, sheetStyle: SheetSty
   clone.style.borderRadius = "0";
   clone.style.boxShadow = "none";
   clone.style.background = "#fffdf9";
-  clone.style.backgroundImage = "none";
+  if (sheetStyle === "imported" && sheetBackground) {
+    clone.style.backgroundImage = `url("${sheetBackground.dataUrl}")`;
+    clone.style.backgroundPosition = "center";
+    clone.style.backgroundRepeat = "no-repeat";
+    clone.style.backgroundSize = "100% 100%";
+  } else {
+    clone.style.backgroundImage = "none";
+  }
   clone.style.setProperty("--canvas-type-size", `${getDefaultCanvasFontSize(sheetStyle)}rem`);
   clone.querySelectorAll(".canvas-snap-guide, .canvas-quick-menu, .canvas-quick-anchor").forEach((node) => node.remove());
 
-  const overlay = createExportSheetOverlay(sheetStyle, exportWidth, exportHeight);
-  clone.insertBefore(overlay, clone.firstChild);
+  if (sheetStyle !== "imported") {
+    const overlay = createExportSheetOverlay(sheetStyle, exportWidth, exportHeight);
+    clone.insertBefore(overlay, clone.firstChild);
+  }
 
   wrapper.append(clone);
   document.body.append(wrapper);
@@ -119,8 +129,8 @@ function createExportCanvasNode(canvasNode: HTMLDivElement, sheetStyle: SheetSty
   };
 }
 
-async function renderCanvasImage(canvasNode: HTMLDivElement, sheetStyle: SheetStyle) {
-  const exportNode = createExportCanvasNode(canvasNode, sheetStyle);
+async function renderCanvasImage(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, sheetBackground: ImportedSheetBackground | null = null) {
+  const exportNode = createExportCanvasNode(canvasNode, sheetStyle, sheetBackground);
 
   try {
     const imageUrl = await toPng(exportNode.node, {
@@ -137,8 +147,8 @@ async function renderCanvasImage(canvasNode: HTMLDivElement, sheetStyle: SheetSt
   }
 }
 
-export async function exportWorkbookPdf(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, title: string) {
-  const {imageUrl, cleanup} = await renderCanvasImage(canvasNode, sheetStyle);
+export async function exportWorkbookPdf(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, title: string, sheetBackground: ImportedSheetBackground | null = null) {
+  const {imageUrl, cleanup} = await renderCanvasImage(canvasNode, sheetStyle, sheetBackground);
 
   try {
     const image = new Image();
@@ -159,8 +169,8 @@ export async function exportWorkbookPdf(canvasNode: HTMLDivElement, sheetStyle: 
   }
 }
 
-export async function exportWorkbookPng(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, title: string) {
-  const {imageUrl, cleanup} = await renderCanvasImage(canvasNode, sheetStyle);
+export async function exportWorkbookPng(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, title: string, sheetBackground: ImportedSheetBackground | null = null) {
+  const {imageUrl, cleanup} = await renderCanvasImage(canvasNode, sheetStyle, sheetBackground);
 
   try {
     const previewWindow = window.open("", "_blank");
@@ -182,8 +192,8 @@ export async function exportWorkbookPng(canvasNode: HTMLDivElement, sheetStyle: 
   }
 }
 
-export async function printWorkbook(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, title: string) {
-  const {imageUrl, cleanup} = await renderCanvasImage(canvasNode, sheetStyle);
+export async function printWorkbook(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, title: string, sheetBackground: ImportedSheetBackground | null = null) {
+  const {imageUrl, cleanup} = await renderCanvasImage(canvasNode, sheetStyle, sheetBackground);
 
   try {
     const printWindow = window.open("", "_blank");
