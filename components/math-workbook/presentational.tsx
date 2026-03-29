@@ -832,8 +832,21 @@ export function WorkbookActionBar({
         <button type="button" className="toolbar-action secondary" onClick={onExportPng} disabled={isExporting !== null}>
           {isExporting === "png" ? t("toolbar.exportPngLoading") : "PNG"}
         </button>
-        <button type="button" className="toolbar-action ghost" onClick={onPrint} disabled={isExporting !== null}>
-          {isExporting === "print" ? t("toolbar.preparingPrint") : t("toolbar.print")}
+        <button
+          type="button"
+          className="toolbar-action ghost"
+          onClick={onPrint}
+          disabled={isExporting !== null}
+          aria-label={t("toolbar.print")}
+          title={t("toolbar.print")}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 8V4h10v4" />
+            <path d="M7 17H6a3 3 0 0 1-3-3v-1a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v1a3 3 0 0 1-3 3h-1" />
+            <rect x="7" y="13" width="10" height="7" rx="1.5" />
+            <path d="M9 16h6" />
+            <circle cx="18" cy="11.5" r="0.9" fill="currentColor" stroke="none" />
+          </svg>
         </button>
         <label className="sheet-style-picker sheet-style-picker-toolbar">
           <select className="sheet-style-select" value={sheetStyle} onChange={(event) => onSheetStyleChange(event.target.value as SheetStyle)} aria-label={t("toolbar.sheetStyle")} data-testid="sheet-style-select">
