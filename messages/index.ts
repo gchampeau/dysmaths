@@ -14,7 +14,7 @@ type Messages = {
     };
     colors: Record<"ink" | "orange" | "blue" | "green" | "pink", string>;
     highlights: Record<"yellow" | "green" | "blue" | "pink", string>;
-    sheetStyles: Record<"seyes" | "largeGrid" | "smallGrid" | "lined" | "blank", string>;
+    sheetStyles: Record<"seyes" | "largeGrid" | "smallGrid" | "lined" | "blank" | "imported", string>;
     geometryTools: Record<"point" | "segment" | "line" | "ray" | "circle" | "compass" | "measure" | "protractor", {label: string; hint: string}>;
     structuredTools: Record<"fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root", {label: string; hint: string}>;
     shortcutGroups: Record<"essentials" | "geometry" | "highSchool" | "variables", string>;
@@ -75,6 +75,19 @@ type Messages = {
       exportFile: string;
       importFile: string;
       importError: string;
+      importSheet: string;
+      replaceImportedSheet: string;
+      clearImportedSheet: string;
+      importSheetError: string;
+      importedSheetSummary: string;
+      importedSheetPage: string;
+      importPdfTitle: string;
+      importPdfHelper: string;
+      previousPage: string;
+      nextPage: string;
+      pageNumber: string;
+      importThisPage: string;
+      loadingPreview: string;
       untitled: string;
       fileMenu: string;
     };
@@ -213,7 +226,8 @@ const en: Messages = {
       largeGrid: "Large grid",
       smallGrid: "Small grid",
       lined: "Ruled paper",
-      blank: "Blank paper"
+      blank: "Blank paper",
+      imported: "Import"
     },
     geometryTools: {
       point: {label: "Point", hint: "Place a point"},
@@ -320,6 +334,19 @@ const en: Messages = {
       exportFile: "Save as file",
       importFile: "Open a file",
       importError: "Could not read this file.",
+      importSheet: "Import",
+      replaceImportedSheet: "Replace import",
+      clearImportedSheet: "Remove import",
+      importSheetError: "Could not import this image or PDF page.",
+      importedSheetSummary: "Imported: {name}",
+      importedSheetPage: "Page {page}",
+      importPdfTitle: "Choose a PDF page",
+      importPdfHelper: "The PDF stays on this device. Only the selected page is rendered and saved as the sheet background.",
+      previousPage: "Previous page",
+      nextPage: "Next page",
+      pageNumber: "Page number",
+      importThisPage: "Use this page",
+      loadingPreview: "Loading preview...",
       untitled: "Untitled",
       fileMenu: "File"
     },
@@ -467,7 +494,8 @@ const fr: Messages = {
       largeGrid: "Grands carreaux",
       smallGrid: "Petits carreaux",
       lined: "Feuille lignée",
-      blank: "Feuille blanche"
+      blank: "Feuille blanche",
+      imported: "Importer"
     },
     geometryTools: {
       point: {label: "Point", hint: "Placer un point"},
@@ -574,6 +602,19 @@ const fr: Messages = {
       exportFile: "Enregistrer en fichier",
       importFile: "Ouvrir un fichier",
       importError: "Impossible de lire ce fichier.",
+      importSheet: "Importer",
+      replaceImportedSheet: "Remplacer l'import",
+      clearImportedSheet: "Retirer l'import",
+      importSheetError: "Impossible d'importer cette image ou cette page PDF.",
+      importedSheetSummary: "Importé : {name}",
+      importedSheetPage: "Page {page}",
+      importPdfTitle: "Choisir une page du PDF",
+      importPdfHelper: "Le PDF reste sur cet appareil. Seule la page choisie est rendue et enregistrée comme fond de feuille.",
+      previousPage: "Page précédente",
+      nextPage: "Page suivante",
+      pageNumber: "Numéro de page",
+      importThisPage: "Utiliser cette page",
+      loadingPreview: "Chargement de l'aperçu...",
       untitled: "Sans titre",
       fileMenu: "Fichier"
     },
@@ -721,7 +762,8 @@ const es: Messages = {
       largeGrid: "Cuadrícula grande",
       smallGrid: "Cuadrícula pequeña",
       lined: "Hoja rayada",
-      blank: "Hoja en blanco"
+      blank: "Hoja en blanco",
+      imported: "Importar"
     },
     geometryTools: {
       point: {label: "Punto", hint: "Colocar un punto"},
@@ -828,6 +870,19 @@ const es: Messages = {
       exportFile: "Guardar como archivo",
       importFile: "Abrir un archivo",
       importError: "No se pudo leer este archivo.",
+      importSheet: "Importar",
+      replaceImportedSheet: "Reemplazar importación",
+      clearImportedSheet: "Quitar importación",
+      importSheetError: "No se pudo importar esta imagen o esta página PDF.",
+      importedSheetSummary: "Importado: {name}",
+      importedSheetPage: "Página {page}",
+      importPdfTitle: "Elegir una página del PDF",
+      importPdfHelper: "El PDF permanece en este dispositivo. Solo se renderiza y guarda la página elegida como fondo de la hoja.",
+      previousPage: "Página anterior",
+      nextPage: "Página siguiente",
+      pageNumber: "Número de página",
+      importThisPage: "Usar esta página",
+      loadingPreview: "Cargando vista previa...",
       untitled: "Sin título",
       fileMenu: "Archivo"
     },

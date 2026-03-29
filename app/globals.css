@@ -1439,6 +1439,16 @@ input {
   border-radius: 12px;
 }
 
+.sheet-imported-summary {
+  max-width: 16rem;
+  color: color-mix(in srgb, var(--ink) 70%, white);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sheet-style-select {
   min-height: 2.5rem;
   padding: 0.44rem 0.82rem;
@@ -2541,6 +2551,75 @@ input {
   background: color-mix(in srgb, var(--surface) 70%, var(--paper));
 }
 
+.imported-sheet-modal {
+  width: min(920px, 100%);
+}
+
+.imported-sheet-modal-helper,
+.imported-sheet-modal-meta,
+.imported-sheet-modal-status {
+  margin: 0.35rem 0 0;
+  color: color-mix(in srgb, var(--ink) 72%, white);
+}
+
+.imported-sheet-modal-meta {
+  font-weight: 700;
+}
+
+.imported-sheet-modal-preview-shell {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.imported-sheet-modal-toolbar {
+  display: flex;
+  gap: 0.6rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.imported-sheet-modal-page-field {
+  display: grid;
+  gap: 0.28rem;
+  color: color-mix(in srgb, var(--ink) 72%, white);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.imported-sheet-modal-page-field input {
+  width: 7rem;
+  min-height: 2.5rem;
+  padding: 0.44rem 0.7rem;
+  border: 1px solid rgba(92, 108, 129, 0.15);
+  border-radius: 12px;
+  background: rgba(255, 252, 247, 0.94);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.imported-sheet-modal-preview {
+  display: grid;
+  place-items: center;
+  min-height: 22rem;
+  border: 1px solid rgba(92, 108, 129, 0.12);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 243, 236, 0.98));
+  padding: 1rem;
+}
+
+.imported-sheet-modal-image {
+  display: block;
+  width: min(100%, 420px);
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(36, 51, 66, 0.16);
+  background: white;
+}
+
+.imported-sheet-modal-status-error {
+  color: #b33c2e;
+}
+
 .graduated-line-modal {
   width: min(760px, 100%);
 }
@@ -3113,6 +3192,10 @@ input {
 
 .document-canvas-blank {
   background: var(--paper);
+}
+
+.document-canvas-imported {
+  background-color: #fffdf9;
 }
 
 .document-canvas-draw-mode {

@@ -4,7 +4,14 @@ import {
 } from "react";
 import {type AppLocale} from "@/i18n/routing";
 export type StudyMode = "middleSchool" | "highSchool";
-export type SheetStyle = "seyes" | "large-grid" | "small-grid" | "lined" | "blank";
+export type SheetStyle = "seyes" | "large-grid" | "small-grid" | "lined" | "blank" | "imported";
+export type ImportedSheetBackground = {
+  dataUrl: string;
+  mimeType: string;
+  sourceName: string;
+  sourceKind: "image" | "pdf";
+  pageNumber: number | null;
+};
 export type StructuredTool = "fraction" | "addition" | "subtraction" | "multiplication" | "division" | "power" | "root";
 export type UtilityMenu = "highlight" | "settings" | "install" | null;
 export type GeometryTool = "point" | "segment" | "line" | "ray" | "circle" | "measure" | "protractor" | "compass";
@@ -264,6 +271,7 @@ export type WriterState = {
   title: string;
   mode: StudyMode;
   sheetStyle: SheetStyle;
+  sheetBackground: ImportedSheetBackground | null;
   activeColor: string;
   activeHighlightColor: string | null;
   activeTextHighlightColor: string | null;
@@ -732,6 +740,7 @@ export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: Def
     title: labels.title,
     mode: "middleSchool",
     sheetStyle,
+    sheetBackground: null,
     activeColor: DEFAULT_ACTIVE_COLOR,
     activeHighlightColor: DEFAULT_HIGHLIGHT_TOOL_COLOR,
     activeTextHighlightColor: null,
@@ -769,7 +778,8 @@ export const SHEET_STYLE_OPTION_IDS = [
   { id: "large-grid", key: "largeGrid" },
   { id: "small-grid", key: "smallGrid" },
   { id: "lined", key: "lined" },
-  { id: "blank", key: "blank" }
+  { id: "blank", key: "blank" },
+  { id: "imported", key: "imported" }
 ] as const;
 
 export const GEOMETRY_TOOL_DEFINITIONS = [
@@ -1143,6 +1153,7 @@ export function getSheetMetrics(sheetStyle: SheetStyle, rem: number) {
         snapY: true
       };
     case "blank":
+    case "imported":
       return {
         snapXStep: seyesStep / 2,
         snapYStep: seyesStep,
@@ -1899,6 +1910,7 @@ export function parseStoredState(raw: string, fallbackSheetStyle: SheetStyle, la
       (parsed as { sheetStyle?: unknown }).sheetStyle === "small-grid" ||
       (parsed as { sheetStyle?: unknown }).sheetStyle === "lined" ||
       (parsed as { sheetStyle?: unknown }).sheetStyle === "blank" ||
+      (parsed as { sheetStyle?: unknown }).sheetStyle === "imported" ||
       (parsed as { sheetStyle?: unknown }).sheetStyle === "seyes"
         ? (parsed as { sheetStyle: SheetStyle }).sheetStyle
         : createDefaultState(fallbackSheetStyle, labels).sheetStyle;
@@ -1919,6 +1931,26 @@ export function parseStoredState(raw: string, fallbackSheetStyle: SheetStyle, la
       ...parsed,
       schemaVersion: WRITER_STATE_SCHEMA_VERSION,
       sheetStyle: parsedSheetStyle,
+      sheetBackground:
+        parsed &&
+        typeof (parsed as { sheetBackground?: unknown }).sheetBackground === "object" &&
+        (parsed as { sheetBackground: ImportedSheetBackground | null }).sheetBackground &&
+        typeof (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.dataUrl === "string" &&
+        typeof (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.mimeType === "string" &&
+        typeof (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.sourceName === "string" &&
+        (((parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.sourceKind === "image") ||
+          ((parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.sourceKind === "pdf"))
+          ? {
+              dataUrl: (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.dataUrl,
+              mimeType: (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.mimeType,
+              sourceName: (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.sourceName,
+              sourceKind: (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.sourceKind,
+              pageNumber:
+                typeof (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.pageNumber === "number"
+                  ? (parsed as { sheetBackground: ImportedSheetBackground }).sheetBackground.pageNumber
+                  : null
+            }
+          : null,
       activeColor: typeof (parsed as { activeColor?: unknown }).activeColor === "string" ? parsed.activeColor : DEFAULT_ACTIVE_COLOR,
       activeHighlightColor:
         typeof (parsed as { activeHighlightColor?: unknown }).activeHighlightColor === "string"
