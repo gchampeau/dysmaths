@@ -1,19 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
-  type DocumentIndex,
-  type DocumentMeta,
+  type PageIndex,
+  type PageMeta,
   type DysmathsFile,
-  DOCUMENT_INDEX_KEY,
-  loadDocumentIndex,
-  saveDocumentIndex,
-  loadDocumentState,
-  saveDocumentState,
-  createDocument,
-  renameDocument,
-  deleteDocument,
-  duplicateDocument,
+  PAGE_INDEX_KEY,
+  loadPageIndex,
+  savePageIndex,
+  loadPageState,
+  savePageState,
+  createPage,
+  deletePage,
   migrateFromLegacyStorage,
-  exportDocumentToFile,
+  exportPageToFile,
   parseImportedFile
 } from "@/components/math-workbook/document-store";
 import {
@@ -67,7 +65,7 @@ function makeState(overrides?: Partial<WriterState>): WriterState {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("document-store", () => {
+describe("document-store (pages)", () => {
   let mockStorage: Storage;
 
   beforeEach(() => {
@@ -77,44 +75,44 @@ describe("document-store", () => {
   });
 
   // -----------------------------------------------------------------------
-  // loadDocumentIndex / saveDocumentIndex
+  // loadPageIndex / savePageIndex
   // -----------------------------------------------------------------------
 
-  describe("loadDocumentIndex", () => {
+  describe("loadPageIndex", () => {
     it("returns empty index when nothing stored", () => {
-      const index = loadDocumentIndex();
-      expect(index.documents).toEqual([]);
-      expect(index.activeDocumentId).toBeNull();
+      const index = loadPageIndex();
+      expect(index.pages).toEqual([]);
+      expect(index.activePageId).toBeNull();
       expect(index.version).toBe(1);
     });
 
     it("returns empty index when stored data is invalid", () => {
-      mockStorage.setItem(DOCUMENT_INDEX_KEY, "not json");
-      const index = loadDocumentIndex();
-      expect(index.documents).toEqual([]);
+      mockStorage.setItem(PAGE_INDEX_KEY, "not json");
+      const index = loadPageIndex();
+      expect(index.pages).toEqual([]);
     });
 
-    it("returns empty index when documents is not an array", () => {
-      mockStorage.setItem(DOCUMENT_INDEX_KEY, JSON.stringify({ version: 1, documents: "bad" }));
-      const index = loadDocumentIndex();
-      expect(index.documents).toEqual([]);
+    it("returns empty index when documents/pages is not an array", () => {
+      mockStorage.setItem(PAGE_INDEX_KEY, JSON.stringify({ version: 1, documents: "bad" }));
+      const index = loadPageIndex();
+      expect(index.pages).toEqual([]);
     });
 
-    it("loads a valid index", () => {
-      const stored: DocumentIndex = {
+    it("loads a valid index (legacy documents format)", () => {
+      const stored = {
         version: 1,
         activeDocumentId: "abc",
         documents: [{ id: "abc", name: "Test", createdAt: "2026-01-01", updatedAt: "2026-01-02" }]
       };
-      mockStorage.setItem(DOCUMENT_INDEX_KEY, JSON.stringify(stored));
-      const index = loadDocumentIndex();
-      expect(index.documents).toHaveLength(1);
-      expect(index.documents[0].name).toBe("Test");
-      expect(index.activeDocumentId).toBe("abc");
+      mockStorage.setItem(PAGE_INDEX_KEY, JSON.stringify(stored));
+      const index = loadPageIndex();
+      expect(index.pages).toHaveLength(1);
+      expect(index.pages[0].name).toBe("Test");
+      expect(index.activePageId).toBe("abc");
     });
 
-    it("filters out invalid document entries", () => {
-      mockStorage.setItem(DOCUMENT_INDEX_KEY, JSON.stringify({
+    it("filters out invalid page entries", () => {
+      mockStorage.setItem(PAGE_INDEX_KEY, JSON.stringify({
         version: 1,
         activeDocumentId: null,
         documents: [
@@ -124,166 +122,121 @@ describe("document-store", () => {
           null
         ]
       }));
-      const index = loadDocumentIndex();
-      expect(index.documents).toHaveLength(1);
-      expect(index.documents[0].id).toBe("ok");
+      const index = loadPageIndex();
+      expect(index.pages).toHaveLength(1);
+      expect(index.pages[0].id).toBe("ok");
     });
   });
 
-  describe("saveDocumentIndex", () => {
+  describe("savePageIndex", () => {
     it("persists the index to localStorage", () => {
-      const index: DocumentIndex = {
+      const index: PageIndex = {
         version: 1,
-        activeDocumentId: "x",
-        documents: [{ id: "x", name: "X", createdAt: "2026-01-01", updatedAt: "2026-01-02" }]
+        activePageId: "x",
+        pages: [{ id: "x", name: "X", createdAt: "2026-01-01", updatedAt: "2026-01-02" }]
       };
-      saveDocumentIndex(index);
-      const raw = mockStorage.getItem(DOCUMENT_INDEX_KEY);
+      savePageIndex(index);
+      const raw = mockStorage.getItem(PAGE_INDEX_KEY);
       expect(raw).not.toBeNull();
       const parsed = JSON.parse(raw!);
-      expect(parsed.activeDocumentId).toBe("x");
+      expect(parsed.activePageId).toBe("x");
     });
   });
 
   // -----------------------------------------------------------------------
-  // loadDocumentState / saveDocumentState
+  // loadPageState / savePageState
   // -----------------------------------------------------------------------
 
-  describe("loadDocumentState", () => {
+  describe("loadPageState", () => {
     it("returns null when no state stored", () => {
-      const result = loadDocumentState("nonexistent", "seyes", DEFAULT_LABELS);
+      const result = loadPageState("nonexistent", "seyes", DEFAULT_LABELS);
       expect(result).toBeNull();
     });
 
     it("loads and validates stored state", () => {
       const state = makeState({ title: "Loaded" });
       mockStorage.setItem("dysmaths-doc-test1", JSON.stringify(state));
-      const result = loadDocumentState("test1", "seyes", DEFAULT_LABELS);
+      const result = loadPageState("test1", "seyes", DEFAULT_LABELS);
       expect(result).not.toBeNull();
       expect(result!.title).toBe("Loaded");
     });
 
     it("returns null for invalid stored state", () => {
       mockStorage.setItem("dysmaths-doc-bad", JSON.stringify({ invalid: true }));
-      const result = loadDocumentState("bad", "seyes", DEFAULT_LABELS);
+      const result = loadPageState("bad", "seyes", DEFAULT_LABELS);
       expect(result).toBeNull();
     });
   });
 
-  describe("saveDocumentState", () => {
+  describe("savePageState", () => {
     it("persists state and updates updatedAt in index", () => {
-      const meta: DocumentMeta = { id: "d1", name: "Doc 1", createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" };
-      saveDocumentIndex({ version: 1, activeDocumentId: "d1", documents: [meta] });
+      const meta: PageMeta = { id: "d1", name: "Page 1", createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" };
+      savePageIndex({ version: 1, activePageId: "d1", pages: [meta] });
 
       const state = makeState({ title: "Updated" });
-      saveDocumentState("d1", state);
+      savePageState("d1", state);
 
       const raw = mockStorage.getItem("dysmaths-doc-d1");
       expect(raw).not.toBeNull();
       expect(JSON.parse(raw!).title).toBe("Updated");
 
-      const index = loadDocumentIndex();
-      expect(index.documents[0].updatedAt).not.toBe("2026-01-01T00:00:00Z");
+      const index = loadPageIndex();
+      expect(index.pages[0].updatedAt).not.toBe("2026-01-01T00:00:00Z");
     });
   });
 
   // -----------------------------------------------------------------------
-  // createDocument
+  // createPage
   // -----------------------------------------------------------------------
 
-  describe("createDocument", () => {
-    it("creates a document and adds it to the index", () => {
-      const state = makeState({ title: "New Doc" });
-      const meta = createDocument("New Doc", state);
+  describe("createPage", () => {
+    it("creates a page and adds it to the index", () => {
+      const state = makeState({ title: "New Page" });
+      const meta = createPage("New Page", state);
 
-      expect(meta.name).toBe("New Doc");
+      expect(meta.name).toBe("New Page");
       expect(meta.id).toBeTruthy();
 
-      const index = loadDocumentIndex();
-      expect(index.documents).toHaveLength(1);
-      expect(index.activeDocumentId).toBe(meta.id);
+      const index = loadPageIndex();
+      expect(index.pages).toHaveLength(1);
+      expect(index.activePageId).toBe(meta.id);
 
       const stored = mockStorage.getItem(`dysmaths-doc-${meta.id}`);
       expect(stored).not.toBeNull();
     });
 
     it("defaults name to Untitled if empty", () => {
-      const meta = createDocument("", makeState());
+      const meta = createPage("", makeState());
       expect(meta.name).toBe("Untitled");
     });
   });
 
   // -----------------------------------------------------------------------
-  // renameDocument
+  // deletePage
   // -----------------------------------------------------------------------
 
-  describe("renameDocument", () => {
-    it("renames a document in the index", () => {
-      const meta = createDocument("Original", makeState());
-      renameDocument(meta.id, "Renamed");
+  describe("deletePage", () => {
+    it("deletes a page from the index and localStorage", () => {
+      const meta1 = createPage("First", makeState());
+      const meta2 = createPage("Second", makeState());
 
-      const index = loadDocumentIndex();
-      expect(index.documents[0].name).toBe("Renamed");
-    });
+      deletePage(meta1.id);
 
-    it("does nothing for non-existent docId", () => {
-      createDocument("A", makeState());
-      renameDocument("nonexistent", "Renamed");
-      const index = loadDocumentIndex();
-      expect(index.documents[0].name).toBe("A");
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // deleteDocument
-  // -----------------------------------------------------------------------
-
-  describe("deleteDocument", () => {
-    it("deletes a document from the index and localStorage", () => {
-      const meta1 = createDocument("First", makeState());
-      const meta2 = createDocument("Second", makeState());
-
-      deleteDocument(meta1.id);
-
-      const index = loadDocumentIndex();
-      expect(index.documents).toHaveLength(1);
-      expect(index.documents[0].id).toBe(meta2.id);
+      const index = loadPageIndex();
+      expect(index.pages).toHaveLength(1);
+      expect(index.pages[0].id).toBe(meta2.id);
       expect(mockStorage.getItem(`dysmaths-doc-${meta1.id}`)).toBeNull();
     });
 
-    it("switches active document if deleted was active", () => {
-      const meta1 = createDocument("First", makeState());
-      const meta2 = createDocument("Second", makeState());
+    it("switches active page if deleted was active", () => {
+      const meta1 = createPage("First", makeState());
+      const meta2 = createPage("Second", makeState());
 
       // meta2 is active (last created)
-      deleteDocument(meta2.id);
+      deletePage(meta2.id);
 
-      const index = loadDocumentIndex();
-      expect(index.activeDocumentId).toBe(meta1.id);
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // duplicateDocument
-  // -----------------------------------------------------------------------
-
-  describe("duplicateDocument", () => {
-    it("duplicates a document with a new name", () => {
-      const state = makeState({ title: "Original" });
-      const meta = createDocument("Original", state);
-
-      const dup = duplicateDocument(meta.id, "Original (copy)", "seyes", DEFAULT_LABELS);
-
-      expect(dup).not.toBeNull();
-      expect(dup!.name).toBe("Original (copy)");
-
-      const index = loadDocumentIndex();
-      expect(index.documents).toHaveLength(2);
-    });
-
-    it("returns null for non-existent docId", () => {
-      const result = duplicateDocument("nonexistent", "Copy", "seyes", DEFAULT_LABELS);
-      expect(result).toBeNull();
+      const index = loadPageIndex();
+      expect(index.activePageId).toBe(meta1.id);
     });
   });
 
@@ -298,41 +251,41 @@ describe("document-store", () => {
 
       const index = migrateFromLegacyStorage("seyes", DEFAULT_LABELS);
 
-      expect(index.documents).toHaveLength(1);
-      expect(index.documents[0].name).toBe("Legacy Doc");
-      expect(index.activeDocumentId).toBe(index.documents[0].id);
+      expect(index.pages).toHaveLength(1);
+      expect(index.pages[0].name).toBe("Legacy Doc");
+      expect(index.activePageId).toBe(index.pages[0].id);
 
       // Legacy key should be removed
       expect(mockStorage.getItem(STORAGE_KEY)).toBeNull();
 
       // New key should exist
-      expect(mockStorage.getItem(`dysmaths-doc-${index.documents[0].id}`)).not.toBeNull();
+      expect(mockStorage.getItem(`dysmaths-doc-${index.pages[0].id}`)).not.toBeNull();
     });
 
     it("returns empty index if no legacy data", () => {
       const index = migrateFromLegacyStorage("seyes", DEFAULT_LABELS);
-      expect(index.documents).toHaveLength(0);
+      expect(index.pages).toHaveLength(0);
     });
 
     it("cleans up invalid legacy data and returns empty index", () => {
       mockStorage.setItem(STORAGE_KEY, "invalid json");
       const index = migrateFromLegacyStorage("seyes", DEFAULT_LABELS);
-      expect(index.documents).toHaveLength(0);
+      expect(index.pages).toHaveLength(0);
       expect(mockStorage.getItem(STORAGE_KEY)).toBeNull();
     });
   });
 
   // -----------------------------------------------------------------------
-  // exportDocumentToFile
+  // exportPageToFile
   // -----------------------------------------------------------------------
 
-  describe("exportDocumentToFile", () => {
+  describe("exportPageToFile", () => {
     it("calls saveAs with a .dysmaths file", async () => {
       const { saveAs } = await import("file-saver");
-      const meta: DocumentMeta = { id: "e1", name: "Export Test", createdAt: "2026-01-01", updatedAt: "2026-01-02" };
+      const meta: PageMeta = { id: "e1", name: "Export Test", createdAt: "2026-01-01", updatedAt: "2026-01-02" };
       const state = makeState({ title: "Export Test" });
 
-      exportDocumentToFile(meta, state);
+      exportPageToFile(meta, state);
 
       expect(saveAs).toHaveBeenCalledTimes(1);
       const [blob, fileName] = (saveAs as ReturnType<typeof vi.fn>).mock.calls[0];

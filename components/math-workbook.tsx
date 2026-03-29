@@ -34,8 +34,6 @@ import {
 import {
   CanvasQuickInsertMenu,
   ConfirmResetModal,
-  ConfirmDeleteDocumentModal,
-  DocumentManagerModal,
   ProfileModal,
   GeometrySettingsMenu,
   GraduatedLineModal,
@@ -47,18 +45,15 @@ import {
   WorkbookSidebar
 } from "@/components/math-workbook/presentational";
 import {
-  type DocumentIndex,
-  type DocumentMeta,
-  loadDocumentIndex,
-  saveDocumentIndex,
-  loadDocumentState,
-  saveDocumentState,
-  createDocument,
-  renameDocument,
-  deleteDocument,
-  duplicateDocument,
+  type PageIndex,
+  loadPageIndex,
+  savePageIndex,
+  loadPageState,
+  savePageState,
+  createPage,
+  deletePage,
   migrateFromLegacyStorage,
-  exportDocumentToFile,
+  exportPageToFile,
   parseImportedFile
 } from "@/components/math-workbook/document-store";
 import type {
@@ -318,9 +313,8 @@ export function MathWorkbook() {
   const [isInstalledApp, setIsInstalledApp] = useState(false);
   const [profileStore, setProfileStore] = useState<ProfileStore>({ profiles: [], activeProfileId: null });
   const [profileEditMode, setProfileEditMode] = useState<"create" | "edit" | null>(null);
-  const [documentIndex, setDocumentIndex] = useState<DocumentIndex>({ version: 1, activeDocumentId: null, documents: [] });
-  const [documentManagerOpen, setDocumentManagerOpen] = useState(false);
-  const [confirmDeleteDocId, setConfirmDeleteDocId] = useState<string | null>(null);
+  const [pageIndex, setPageIndex] = useState<PageIndex>({ version: 1, activePageId: null, pages: [] });
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeProfile = useMemo(
     () => profileStore.profiles.find((p) => p.id === profileStore.activeProfileId) ?? null,
@@ -768,32 +762,32 @@ export function MathWorkbook() {
   }, [pendingInsertTool, activeInlineShortcuts, activeStructuredTools, t, workbookUi.blockTitles.default]);
 
   useEffect(() => {
-    let index = loadDocumentIndex();
+    let index = loadPageIndex();
 
-    if (index.documents.length === 0) {
+    if (index.pages.length === 0) {
       index = migrateFromLegacyStorage(defaultSheetStyle, workbookUi.defaultDocumentLabels);
     }
 
-    if (index.documents.length === 0) {
+    if (index.pages.length === 0) {
       const defaultState = createDefaultState(defaultSheetStyle, workbookUi.defaultDocumentLabels);
-      createDocument(workbookUi.defaultDocumentLabels.title, defaultState);
-      index = loadDocumentIndex();
+      createPage(workbookUi.defaultDocumentLabels.title, defaultState);
+      index = loadPageIndex();
     }
 
-    const activeId = index.activeDocumentId ?? index.documents[0]?.id;
+    const activeId = index.activePageId ?? index.pages[0]?.id;
 
     if (activeId) {
-      const loaded = loadDocumentState(activeId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+      const loaded = loadPageState(activeId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
 
       if (loaded) {
         setState(loaded);
       }
 
-      index = { ...index, activeDocumentId: activeId };
-      saveDocumentIndex(index);
+      index = { ...index, activePageId: activeId };
+      savePageIndex(index);
     }
 
-    setDocumentIndex(index);
+    setPageIndex(index);
     setIsHydrated(true);
   }, [defaultSheetStyle, workbookUi.defaultDocumentLabels]);
 
@@ -810,12 +804,12 @@ export function MathWorkbook() {
   }, []);
 
   useEffect(() => {
-    if (!isHydrated || !documentIndex.activeDocumentId) {
+    if (!isHydrated || !pageIndex.activePageId) {
       return;
     }
 
-    saveDocumentState(documentIndex.activeDocumentId, state);
-  }, [isHydrated, state, documentIndex.activeDocumentId]);
+    savePageState(pageIndex.activePageId, state);
+  }, [isHydrated, state, pageIndex.activePageId]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(PROFILE_STORAGE_KEY);
@@ -4902,11 +4896,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
     return renderBasicInlineEditor(block as FractionBlock | PowerBlock | RootBlock, bindInlineInput as never);
   }
-  function resetDocument() {
-    setConfirmResetState({ open: true });
-  }
-
-  function confirmResetDocument() {
+  function createProfileAwareDefaultState(): WriterState {
     const labels = getDocumentLabelsForProfile(activeProfile, workbookUi.defaultDocumentLabels, locale);
     const sheetStyle = activeProfile?.preferredSheetStyle ?? defaultSheetStyle;
     const newState = createDefaultState(sheetStyle, labels);
@@ -4923,19 +4913,14 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       newState.textBoxes = applyHeaderPositions(newState.textBoxes, activeProfile);
     }
 
+    return newState;
+  }
+
+  function confirmResetDocument() {
+    const newState = createProfileAwareDefaultState();
+    clearTransientState();
     setState(newState);
-    setOpenMenu(null);
-    setCanvasQuickMenu(null);
-    setModalState(null);
-    clearGraduatedLineDraftState();
     setConfirmResetState(null);
-    clearFloatingSelection();
-    selectionRef.current = null;
-    setHistoryPast([]);
-    setHistoryFuture([]);
-    if (editorRef.current) {
-      editorRef.current.innerHTML = DEFAULT_TEXT_HTML;
-    }
   }
 
   function clearTransientState() {
@@ -4955,96 +4940,66 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     }
   }
 
-  function handleSwitchDocument(docId: string) {
-    if (docId === documentIndex.activeDocumentId) return;
+  function handleSwitchPage(pageId: string) {
+    if (pageId === pageIndex.activePageId) return;
 
-    const loaded = loadDocumentState(docId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+    const loaded = loadPageState(pageId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
     if (!loaded) return;
 
     clearTransientState();
     setState(loaded);
 
-    const newIndex = { ...documentIndex, activeDocumentId: docId };
-    saveDocumentIndex(newIndex);
-    setDocumentIndex(newIndex);
-    setDocumentManagerOpen(false);
+    const newIndex = { ...pageIndex, activePageId: pageId };
+    savePageIndex(newIndex);
+    setPageIndex(newIndex);
   }
 
-  function handleNewDocument() {
-    const labels = getDocumentLabelsForProfile(activeProfile, workbookUi.defaultDocumentLabels, locale);
-    const sheetStyle = activeProfile?.preferredSheetStyle ?? defaultSheetStyle;
-    const newState = createDefaultState(sheetStyle, labels);
-
-    if (activeProfile) {
-      newState.mode = activeProfile.preferredMode;
-
-      if (newState.textBoxes.length >= 3) {
-        if (!activeProfile.showName) newState.textBoxes[0] = { ...newState.textBoxes[0], hidden: true };
-        if (!activeProfile.showClass) newState.textBoxes[1] = { ...newState.textBoxes[1], hidden: true };
-        if (!activeProfile.showDate) newState.textBoxes[2] = { ...newState.textBoxes[2], hidden: true };
-      }
-
-      newState.textBoxes = applyHeaderPositions(newState.textBoxes, activeProfile);
-    }
-
-    const meta = createDocument(newState.title, newState);
+  function handleNewPage() {
+    const newState = createProfileAwareDefaultState();
+    createPage(newState.title, newState);
     clearTransientState();
     setState(newState);
-    setDocumentIndex(loadDocumentIndex());
-    setDocumentManagerOpen(false);
+    setPageIndex(loadPageIndex());
   }
 
-  function handleDuplicateDocument(docId: string) {
-    const meta = documentIndex.documents.find((d) => d.id === docId);
-    if (!meta) return;
+  function handleDeletePage(pageId: string) {
+    if (pageIndex.pages.length <= 1) return;
+    if (!window.confirm(t("pages.deletePageConfirm"))) return;
 
-    const newName = meta.name + t("documentManager.duplicateSuffix");
-    const newMeta = duplicateDocument(docId, newName, defaultSheetStyle, workbookUi.defaultDocumentLabels);
-    if (!newMeta) return;
+    const wasActive = pageId === pageIndex.activePageId;
+    deletePage(pageId);
+    const newIndex = loadPageIndex();
+    setPageIndex(newIndex);
 
-    setDocumentIndex(loadDocumentIndex());
-    handleSwitchDocument(newMeta.id);
-  }
-
-  function handleDeleteDocument(docId: string) {
-    setConfirmDeleteDocId(docId);
-  }
-
-  function handleConfirmDeleteDocument() {
-    if (!confirmDeleteDocId) return;
-
-    const wasActive = confirmDeleteDocId === documentIndex.activeDocumentId;
-    deleteDocument(confirmDeleteDocId);
-    const newIndex = loadDocumentIndex();
-    setDocumentIndex(newIndex);
-    setConfirmDeleteDocId(null);
-
-    if (wasActive && newIndex.documents.length > 0) {
-      handleSwitchDocument(newIndex.activeDocumentId ?? newIndex.documents[0].id);
+    if (wasActive && newIndex.pages.length > 0) {
+      handleSwitchPage(newIndex.activePageId ?? newIndex.pages[0].id);
     }
   }
 
-  function handleRenameDocument(docId: string, name: string) {
-    renameDocument(docId, name);
-    setDocumentIndex(loadDocumentIndex());
+  function handleDeleteAllPages() {
+    setConfirmDeleteAllOpen(true);
   }
 
-  function handleExportDocumentFile(docId?: string) {
-    const targetId = docId ?? documentIndex.activeDocumentId;
+  function confirmDeleteAllPages() {
+    for (const page of pageIndex.pages) {
+      deletePage(page.id);
+    }
+
+    handleNewPage();
+    setConfirmDeleteAllOpen(false);
+  }
+
+  function handleExportFile() {
+    const targetId = pageIndex.activePageId;
     if (!targetId) return;
 
-    const meta = documentIndex.documents.find((d) => d.id === targetId);
+    const meta = pageIndex.pages.find((d) => d.id === targetId);
     if (!meta) return;
 
-    if (targetId === documentIndex.activeDocumentId) {
-      exportDocumentToFile(meta, state);
-    } else {
-      const docState = loadDocumentState(targetId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
-      if (docState) exportDocumentToFile(meta, docState);
-    }
+    exportPageToFile(meta, state);
   }
 
-  function handleImportDocumentFile() {
+  function handleImportFile() {
     fileInputRef.current?.click();
   }
 
@@ -5058,15 +5013,14 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       const result = parseImportedFile(raw, defaultSheetStyle, workbookUi.defaultDocumentLabels);
 
       if (!result) {
-        window.alert(t("documentManager.importError"));
+        window.alert(t("pages.importError"));
         return;
       }
 
-      const meta = createDocument(result.name, result.state);
+      createPage(result.name, result.state);
       clearTransientState();
       setState(result.state);
-      setDocumentIndex(loadDocumentIndex());
-      setDocumentManagerOpen(false);
+      setPageIndex(loadPageIndex());
     };
 
     reader.readAsText(file);
@@ -5477,21 +5431,21 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           isExporting={isExporting}
           sheetStyle={state.sheetStyle}
           sheetStyleOptions={workbookUi.sheetStyleOptions}
-          documents={documentIndex.documents}
-          activeDocumentId={documentIndex.activeDocumentId}
+          pages={pageIndex.pages}
+          activePageId={pageIndex.activePageId}
           onOpenTools={() => setIsToolsPanelOpen(true)}
           onUndo={undoHistory}
           onRedo={redoHistory}
           onExportPdf={exportPdf}
           onExportPng={exportPng}
           onPrint={printSheet}
-          onExportDocumentFile={() => handleExportDocumentFile()}
           onSheetStyleChange={(sheetStyle) => setState((current) => ({...current, sheetStyle}))}
-          onResetDocument={resetDocument}
-          onSwitchDocument={handleSwitchDocument}
-          onNewDocument={handleNewDocument}
-          onImportDocument={handleImportDocumentFile}
-          onOpenDocumentManager={() => setDocumentManagerOpen(true)}
+          onNewPage={handleNewPage}
+          onSwitchPage={handleSwitchPage}
+          onDeletePage={handleDeletePage}
+          onDeleteAllPages={handleDeleteAllPages}
+          onExportFile={handleExportFile}
+          onImportFile={handleImportFile}
           profiles={profileStore.profiles}
           activeProfileId={profileStore.activeProfileId}
           onProfileChange={handleProfileChange}
@@ -5999,26 +5953,26 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         onClose={() => setConfirmResetState(null)}
         onConfirm={confirmResetDocument}
       />
-      {documentManagerOpen ? (
-        <DocumentManagerModal
-          t={t}
-          documents={documentIndex.documents}
-          activeDocumentId={documentIndex.activeDocumentId}
-          onSwitchDocument={handleSwitchDocument}
-          onRenameDocument={handleRenameDocument}
-          onDuplicateDocument={handleDuplicateDocument}
-          onDeleteDocument={handleDeleteDocument}
-          onExportDocument={(docId) => handleExportDocumentFile(docId)}
-          onImportDocument={handleImportDocumentFile}
-          onClose={() => setDocumentManagerOpen(false)}
-        />
-      ) : null}
-      {confirmDeleteDocId ? (
-        <ConfirmDeleteDocumentModal
-          t={t}
-          onClose={() => setConfirmDeleteDocId(null)}
-          onConfirm={handleConfirmDeleteDocument}
-        />
+      {confirmDeleteAllOpen ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setConfirmDeleteAllOpen(false)}>
+          <section className="block-modal" role="dialog" aria-modal="true" aria-labelledby="delete-all-modal-title" onClick={(event) => event.stopPropagation()}>
+            <div className="block-modal-head">
+              <div>
+                <p className="card-kind">{t("modal.confirmation")}</p>
+                <h2 id="delete-all-modal-title">{t("pages.deleteAll")}</h2>
+                <p className="toolbar-helper">{t("pages.deleteAllConfirm")}</p>
+              </div>
+              <div className="card-actions">
+                <button type="button" className="small-action" onClick={() => setConfirmDeleteAllOpen(false)}>
+                  {t("modal.cancel")}
+                </button>
+                <button type="button" className="small-action primary-inline-action" onClick={confirmDeleteAllPages}>
+                  {t("pages.deleteAll")}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
       ) : null}
       <input
         ref={fileInputRef}

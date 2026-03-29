@@ -65,22 +65,18 @@ type Messages = {
       install: string;
       installHelp: string;
     };
-    documentManager: {
-      title: string;
-      rename: string;
-      duplicate: string;
-      delete: string;
-      deleteConfirm: string;
-      deleteHelper: string;
+    pages: {
+      newPage: string;
+      deletePage: string;
+      deletePageConfirm: string;
+      deleteAll: string;
+      deleteAllConfirm: string;
+      page: string;
       exportFile: string;
       importFile: string;
-      close: string;
-      untitled: string;
-      duplicateSuffix: string;
       importError: string;
-      created: string;
-      modified: string;
-      manageDocuments: string;
+      untitled: string;
+      fileMenu: string;
     };
     geometryHelper: {
       idle: string;
@@ -314,22 +310,18 @@ const en: Messages = {
       install: "Install",
       installHelp: "Use the install icon in the address bar or your browser menu to install the app on this device."
     },
-    documentManager: {
-      title: "My documents",
-      rename: "Rename",
-      duplicate: "Duplicate",
-      delete: "Delete",
-      deleteConfirm: "Delete this document?",
-      deleteHelper: "This document will be permanently deleted.",
+    pages: {
+      newPage: "New",
+      deletePage: "Delete",
+      deletePageConfirm: "Delete this page?",
+      deleteAll: "Delete all pages",
+      deleteAllConfirm: "Delete all pages and start fresh?",
+      page: "Page",
       exportFile: "Save as file",
       importFile: "Open a file",
-      close: "Close",
-      untitled: "Untitled document",
-      duplicateSuffix: " (copy)",
       importError: "Could not read this file.",
-      created: "Created",
-      modified: "Modified",
-      manageDocuments: "Manage documents"
+      untitled: "Untitled",
+      fileMenu: "File"
     },
     geometryHelper: {
       idle: "Draw precise figures while preserving the sheet scale for printing.",
@@ -572,22 +564,18 @@ const fr: Messages = {
       install: "Installer",
       installHelp: "Utilise l’icône d’installation dans la barre d’adresse ou le menu du navigateur pour installer l’app sur cet appareil."
     },
-    documentManager: {
-      title: "Mes documents",
-      rename: "Renommer",
-      duplicate: "Dupliquer",
-      delete: "Supprimer",
-      deleteConfirm: "Supprimer ce document ?",
-      deleteHelper: "Ce document sera supprimé définitivement.",
+    pages: {
+      newPage: "Nouveau",
+      deletePage: "Supprimer",
+      deletePageConfirm: "Supprimer cette page ?",
+      deleteAll: "Supprimer toutes les pages",
+      deleteAllConfirm: "Supprimer toutes les pages et recommencer ?",
+      page: "Page",
       exportFile: "Enregistrer en fichier",
       importFile: "Ouvrir un fichier",
-      close: "Fermer",
-      untitled: "Document sans titre",
-      duplicateSuffix: " (copie)",
       importError: "Impossible de lire ce fichier.",
-      created: "Créé le",
-      modified: "Modifié le",
-      manageDocuments: "Gérer les documents"
+      untitled: "Sans titre",
+      fileMenu: "Fichier"
     },
     geometryHelper: {
       idle: "Trace des figures précises en gardant l’échelle de la feuille pour l’impression.",
@@ -830,22 +818,18 @@ const es: Messages = {
       install: "Instalar",
       installHelp: "Usa el icono de instalación de la barra de direcciones o el menú del navegador para instalar la app en este dispositivo."
     },
-    documentManager: {
-      title: "Mis documentos",
-      rename: "Renombrar",
-      duplicate: "Duplicar",
-      delete: "Eliminar",
-      deleteConfirm: "¿Eliminar este documento?",
-      deleteHelper: "Este documento se eliminará permanentemente.",
+    pages: {
+      newPage: "Nuevo",
+      deletePage: "Eliminar",
+      deletePageConfirm: "¿Eliminar esta página?",
+      deleteAll: "Eliminar todas las páginas",
+      deleteAllConfirm: "¿Eliminar todas las páginas y empezar de nuevo?",
+      page: "Página",
       exportFile: "Guardar como archivo",
       importFile: "Abrir un archivo",
-      close: "Cerrar",
-      untitled: "Documento sin título",
-      duplicateSuffix: " (copia)",
       importError: "No se pudo leer este archivo.",
-      created: "Creado",
-      modified: "Modificado",
-      manageDocuments: "Gestionar documentos"
+      untitled: "Sin título",
+      fileMenu: "Archivo"
     },
     geometryHelper: {
       idle: "Traza figuras precisas manteniendo la escala de la hoja para la impresión.",

@@ -5,7 +5,6 @@ import {
   type WriterState,
   STORAGE_KEY,
   WRITER_STATE_SCHEMA_VERSION,
-  cloneWriterState,
   parseStoredState,
   safeFileName
 } from "./shared";
@@ -14,17 +13,17 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-export type DocumentMeta = {
+export type PageMeta = {
   id: string;
   name: string;
   createdAt: string;
   updatedAt: string;
 };
 
-export type DocumentIndex = {
+export type PageIndex = {
   version: number;
-  activeDocumentId: string | null;
-  documents: DocumentMeta[];
+  activePageId: string | null;
+  pages: PageMeta[];
 };
 
 export type DysmathsFile = {
@@ -40,21 +39,22 @@ export type DysmathsFile = {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const DOCUMENT_INDEX_KEY = "dysmaths-documents-v1";
-const DOCUMENT_KEY_PREFIX = "dysmaths-doc-";
-const DOCUMENT_INDEX_VERSION = 1;
+// Keep the legacy localStorage keys for backward compatibility with existing user data
+export const PAGE_INDEX_KEY = "dysmaths-documents-v1";
+const PAGE_KEY_PREFIX = "dysmaths-doc-";
+const PAGE_INDEX_VERSION = 1;
 const DYSMATHS_FILE_VERSION = 1;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getDocumentStorageKey(docId: string): string {
-  return `${DOCUMENT_KEY_PREFIX}${docId}`;
+function getPageStorageKey(pageId: string): string {
+  return `${PAGE_KEY_PREFIX}${pageId}`;
 }
 
-function createEmptyIndex(): DocumentIndex {
-  return { version: DOCUMENT_INDEX_VERSION, activeDocumentId: null, documents: [] };
+function createEmptyIndex(): PageIndex {
+  return { version: PAGE_INDEX_VERSION, activePageId: null, pages: [] };
 }
 
 function nowIso(): string {
@@ -65,25 +65,28 @@ function nowIso(): string {
 // Index operations
 // ---------------------------------------------------------------------------
 
-export function loadDocumentIndex(): DocumentIndex {
+export function loadPageIndex(): PageIndex {
   try {
-    const raw = window.localStorage.getItem(DOCUMENT_INDEX_KEY);
+    const raw = window.localStorage.getItem(PAGE_INDEX_KEY);
 
     if (!raw) {
       return createEmptyIndex();
     }
 
-    const parsed = JSON.parse(raw) as DocumentIndex;
+    const parsed = JSON.parse(raw);
 
-    if (!parsed || !Array.isArray(parsed.documents)) {
+    if (!parsed || !Array.isArray(parsed.documents ?? parsed.pages)) {
       return createEmptyIndex();
     }
 
+    const docs = parsed.documents ?? parsed.pages;
+    const activeId = parsed.activeDocumentId ?? parsed.activePageId;
+
     return {
-      version: DOCUMENT_INDEX_VERSION,
-      activeDocumentId: typeof parsed.activeDocumentId === "string" ? parsed.activeDocumentId : null,
-      documents: parsed.documents.filter(
-        (d) =>
+      version: PAGE_INDEX_VERSION,
+      activePageId: typeof activeId === "string" ? activeId : null,
+      pages: docs.filter(
+        (d: Record<string, unknown>) =>
           d &&
           typeof d.id === "string" &&
           typeof d.name === "string" &&
@@ -96,20 +99,20 @@ export function loadDocumentIndex(): DocumentIndex {
   }
 }
 
-export function saveDocumentIndex(index: DocumentIndex): void {
-  window.localStorage.setItem(DOCUMENT_INDEX_KEY, JSON.stringify(index));
+export function savePageIndex(index: PageIndex): void {
+  window.localStorage.setItem(PAGE_INDEX_KEY, JSON.stringify(index));
 }
 
 // ---------------------------------------------------------------------------
-// Document state operations
+// Page state operations
 // ---------------------------------------------------------------------------
 
-export function loadDocumentState(
-  docId: string,
+export function loadPageState(
+  pageId: string,
   fallbackSheetStyle: SheetStyle,
   labels: DefaultDocumentLabels
 ): WriterState | null {
-  const raw = window.localStorage.getItem(getDocumentStorageKey(docId));
+  const raw = window.localStorage.getItem(getPageStorageKey(pageId));
 
   if (!raw) {
     return null;
@@ -118,16 +121,15 @@ export function loadDocumentState(
   return parseStoredState(raw, fallbackSheetStyle, labels);
 }
 
-export function saveDocumentState(docId: string, state: WriterState): void {
-  window.localStorage.setItem(getDocumentStorageKey(docId), JSON.stringify(state));
+export function savePageState(pageId: string, state: WriterState): void {
+  window.localStorage.setItem(getPageStorageKey(pageId), JSON.stringify(state));
 
-  // Update the updatedAt timestamp in the index
-  const index = loadDocumentIndex();
-  const entry = index.documents.find((d) => d.id === docId);
+  const index = loadPageIndex();
+  const entry = index.pages.find((d) => d.id === pageId);
 
   if (entry) {
     entry.updatedAt = nowIso();
-    saveDocumentIndex(index);
+    savePageIndex(index);
   }
 }
 
@@ -135,63 +137,34 @@ export function saveDocumentState(docId: string, state: WriterState): void {
 // CRUD operations
 // ---------------------------------------------------------------------------
 
-export function createDocument(name: string, state: WriterState): DocumentMeta {
+export function createPage(name: string, state: WriterState): PageMeta {
   const now = nowIso();
-  const meta: DocumentMeta = {
+  const meta: PageMeta = {
     id: crypto.randomUUID(),
     name: name || "Untitled",
     createdAt: now,
     updatedAt: now
   };
 
-  const index = loadDocumentIndex();
-  index.documents.push(meta);
-  index.activeDocumentId = meta.id;
-  saveDocumentIndex(index);
-  window.localStorage.setItem(getDocumentStorageKey(meta.id), JSON.stringify(state));
+  const index = loadPageIndex();
+  index.pages.push(meta);
+  index.activePageId = meta.id;
+  savePageIndex(index);
+  window.localStorage.setItem(getPageStorageKey(meta.id), JSON.stringify(state));
 
   return meta;
 }
 
-export function renameDocument(docId: string, name: string): void {
-  const index = loadDocumentIndex();
-  const entry = index.documents.find((d) => d.id === docId);
+export function deletePage(pageId: string): void {
+  const index = loadPageIndex();
+  index.pages = index.pages.filter((d) => d.id !== pageId);
 
-  if (entry) {
-    entry.name = name;
-    entry.updatedAt = nowIso();
-    saveDocumentIndex(index);
-  }
-}
-
-export function deleteDocument(docId: string): void {
-  const index = loadDocumentIndex();
-  index.documents = index.documents.filter((d) => d.id !== docId);
-
-  if (index.activeDocumentId === docId) {
-    index.activeDocumentId = index.documents[0]?.id ?? null;
+  if (index.activePageId === pageId) {
+    index.activePageId = index.pages[0]?.id ?? null;
   }
 
-  saveDocumentIndex(index);
-  window.localStorage.removeItem(getDocumentStorageKey(docId));
-}
-
-export function duplicateDocument(
-  docId: string,
-  newName: string,
-  fallbackSheetStyle: SheetStyle,
-  labels: DefaultDocumentLabels
-): DocumentMeta | null {
-  const state = loadDocumentState(docId, fallbackSheetStyle, labels);
-
-  if (!state) {
-    return null;
-  }
-
-  const cloned = cloneWriterState(state);
-  cloned.title = newName;
-
-  return createDocument(newName, cloned);
+  savePageIndex(index);
+  window.localStorage.removeItem(getPageStorageKey(pageId));
 }
 
 // ---------------------------------------------------------------------------
@@ -201,26 +174,26 @@ export function duplicateDocument(
 export function migrateFromLegacyStorage(
   fallbackSheetStyle: SheetStyle,
   labels: DefaultDocumentLabels
-): DocumentIndex {
+): PageIndex {
   const raw = window.localStorage.getItem(STORAGE_KEY);
 
   if (!raw) {
-    return loadDocumentIndex();
+    return loadPageIndex();
   }
 
   const parsed = parseStoredState(raw, fallbackSheetStyle, labels);
 
   if (!parsed) {
     window.localStorage.removeItem(STORAGE_KEY);
-    return loadDocumentIndex();
+    return loadPageIndex();
   }
 
-  const meta = createDocument(parsed.title || labels.title, parsed);
+  const meta = createPage(parsed.title || labels.title, parsed);
   window.localStorage.removeItem(STORAGE_KEY);
 
-  const index = loadDocumentIndex();
-  index.activeDocumentId = meta.id;
-  saveDocumentIndex(index);
+  const index = loadPageIndex();
+  index.activePageId = meta.id;
+  savePageIndex(index);
 
   return index;
 }
@@ -229,7 +202,7 @@ export function migrateFromLegacyStorage(
 // File export / import
 // ---------------------------------------------------------------------------
 
-export function exportDocumentToFile(meta: DocumentMeta, state: WriterState): void {
+export function exportPageToFile(meta: PageMeta, state: WriterState): void {
   const file: DysmathsFile = {
     format: "dysmaths",
     version: DYSMATHS_FILE_VERSION,

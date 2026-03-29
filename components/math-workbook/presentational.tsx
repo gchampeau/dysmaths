@@ -1,4 +1,4 @@
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import type {CSSProperties as ReactCSSProperties, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject} from "react";
 import {localeLabels, type AppLocale} from "@/i18n/routing";
@@ -52,7 +52,7 @@ import {
   type UserProfile,
   type WorkbookTranslator
 } from "@/components/math-workbook/shared";
-import type {DocumentMeta} from "@/components/math-workbook/document-store";
+import type {PageMeta} from "@/components/math-workbook/document-store";
 
 type WorkbookSidebarProps = {
   t: WorkbookTranslator;
@@ -718,21 +718,21 @@ type WorkbookActionBarProps = {
   sheetStyleOptions: SheetStyleOption[];
   profiles: UserProfile[];
   activeProfileId: string | null;
-  documents: DocumentMeta[];
-  activeDocumentId: string | null;
+  pages: PageMeta[];
+  activePageId: string | null;
   onOpenTools: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onExportPdf: () => void;
   onExportPng: () => void;
   onPrint: () => void;
-  onExportDocumentFile: () => void;
   onSheetStyleChange: (sheetStyle: SheetStyle) => void;
-  onResetDocument: () => void;
-  onSwitchDocument: (docId: string) => void;
-  onNewDocument: () => void;
-  onImportDocument: () => void;
-  onOpenDocumentManager: () => void;
+  onNewPage: () => void;
+  onSwitchPage: (pageId: string) => void;
+  onDeletePage: (pageId: string) => void;
+  onDeleteAllPages: () => void;
+  onExportFile: () => void;
+  onImportFile: () => void;
   onProfileChange: (profileId: string | null) => void;
   onSetProfileEditMode: (mode: "create" | "edit" | null) => void;
 };
@@ -751,21 +751,42 @@ export function WorkbookActionBar({
   onExportPdf,
   onExportPng,
   onPrint,
-  onExportDocumentFile,
   onSheetStyleChange,
-  onResetDocument,
-  documents,
-  activeDocumentId,
-  onSwitchDocument,
-  onNewDocument,
-  onImportDocument,
-  onOpenDocumentManager,
+  pages,
+  activePageId,
+  onNewPage,
+  onSwitchPage,
+  onDeletePage,
+  onDeleteAllPages,
+  onExportFile,
+  onImportFile,
   profiles,
   activeProfileId,
   onProfileChange,
   onSetProfileEditMode
 }: WorkbookActionBarProps) {
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const [pageMenuOpen, setPageMenuOpen] = useState(false);
+  const pageMenuRef = useRef<HTMLDivElement>(null);
+  const fileMenuRef = useRef<HTMLDivElement>(null);
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
+
+  useEffect(() => {
+    if (!fileMenuOpen && !pageMenuOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (fileMenuOpen && fileMenuRef.current && !fileMenuRef.current.contains(target)) {
+        setFileMenuOpen(false);
+      }
+      if (pageMenuOpen && pageMenuRef.current && !pageMenuRef.current.contains(target)) {
+        setPageMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [fileMenuOpen, pageMenuOpen]);
   const initials = activeProfile ? `${activeProfile.firstName.charAt(0)}${activeProfile.lastName.charAt(0)}`.toUpperCase() : null;
 
   function handleSwitcherChange(value: string) {
@@ -773,18 +794,6 @@ export function WorkbookActionBar({
       onSetProfileEditMode("create");
     } else {
       onProfileChange(value || null);
-    }
-  }
-
-  function handleDocumentSwitcherChange(value: string) {
-    if (value === "__new__") {
-      onNewDocument();
-    } else if (value === "__import__") {
-      onImportDocument();
-    } else if (value === "__manage__") {
-      onOpenDocumentManager();
-    } else {
-      onSwitchDocument(value);
     }
   }
 
@@ -826,14 +835,6 @@ export function WorkbookActionBar({
         <button type="button" className="toolbar-action ghost" onClick={onPrint} disabled={isExporting !== null}>
           {isExporting === "print" ? t("toolbar.preparingPrint") : t("toolbar.print")}
         </button>
-        <button type="button" className="toolbar-action ghost" onClick={onExportDocumentFile} title={t("documentManager.exportFile")}>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          .dysmaths
-        </button>
         <label className="sheet-style-picker sheet-style-picker-toolbar">
           <select className="sheet-style-select" value={sheetStyle} onChange={(event) => onSheetStyleChange(event.target.value as SheetStyle)} aria-label={t("toolbar.sheetStyle")} data-testid="sheet-style-select">
             {sheetStyleOptions.map((option) => (
@@ -843,32 +844,88 @@ export function WorkbookActionBar({
             ))}
           </select>
         </label>
-        <button type="button" className="toolbar-action ghost" onClick={onResetDocument}>
-          {t("toolbar.newDocument")}
+        <button type="button" className="toolbar-action ghost" onClick={onNewPage}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          {t("pages.newPage")}
         </button>
-        <div className="document-switcher" title={t("documentManager.title")}>
-          <select
-            className="document-switcher-select"
-            value={activeDocumentId ?? ""}
-            onChange={(event) => handleDocumentSwitcherChange(event.target.value)}
-            aria-label={t("documentManager.title")}
-          >
-            {documents.map((doc) => (
-              <option key={doc.id} value={doc.id}>
-                {doc.name.length > 30 ? `${doc.name.slice(0, 30)}…` : doc.name}
-              </option>
-            ))}
-            <option disabled>──────────</option>
-            <option value="__new__">+ {t("toolbar.newDocument")}</option>
-            <option value="__import__">{t("documentManager.importFile")}</option>
-            <option value="__manage__">{t("documentManager.manageDocuments")}</option>
-          </select>
-          <span className="document-switcher-badge" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {pages.length > 1 ? (
+          <div className="page-navigator" ref={pageMenuRef} aria-label={t("pages.page")}>
+            <button type="button" className="page-nav-toggle" onClick={() => setPageMenuOpen(!pageMenuOpen)}>
+              {t("pages.page")} {pages.findIndex((p) => p.id === activePageId) + 1}/{pages.length}
+              <svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true">
+                <path d="M0 0l5 6 5-6z" fill="currentColor" opacity="0.5" />
+              </svg>
+            </button>
+            {pageMenuOpen ? (
+              <div className="page-menu-dropdown" role="menu">
+                  {pages.map((page, index) => (
+                    <button
+                      key={page.id}
+                      type="button"
+                      className={`file-menu-item${page.id === activePageId ? " page-menu-item-active" : ""}`}
+                      role="menuitem"
+                      onClick={() => { onSwitchPage(page.id); setPageMenuOpen(false); }}
+                    >
+                      {t("pages.page")} {index + 1}
+                    </button>
+                  ))}
+                </div>
+            ) : null}
+            <button
+              type="button"
+              className="page-nav-delete"
+              onClick={() => onDeletePage(activePageId!)}
+              title={t("pages.deletePage")}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        ) : null}
+        <div className="file-menu-wrapper" ref={fileMenuRef}>
+          <button type="button" className="toolbar-action ghost file-menu-toggle" onClick={() => setFileMenuOpen(!fileMenuOpen)} title={t("pages.fileMenu")}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
               <polyline points="14 2 14 8 20 8" />
             </svg>
-          </span>
+          </button>
+          {fileMenuOpen ? (
+              <div className="file-menu-dropdown" role="menu">
+                <button type="button" className="file-menu-item" role="menuitem" onClick={() => { onExportFile(); setFileMenuOpen(false); }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  {t("pages.exportFile")}
+                </button>
+                <button type="button" className="file-menu-item" role="menuitem" onClick={() => { onImportFile(); setFileMenuOpen(false); }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  {t("pages.importFile")}
+                </button>
+                {pages.length > 1 ? (
+                  <>
+                    <hr className="file-menu-separator" />
+                    <button type="button" className="file-menu-item file-menu-item-danger" role="menuitem" onClick={() => { onDeleteAllPages(); setFileMenuOpen(false); }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      {t("pages.deleteAll")}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+          ) : null}
         </div>
         <div className="profile-switcher" title={t("profile.switcherHint")}>
           <select
@@ -1745,167 +1802,3 @@ export function ProfileModal({ t, mode, profile, sheetStyleOptions, onSave, onCl
   );
 }
 
-// ---------------------------------------------------------------------------
-// Document Manager Modal
-// ---------------------------------------------------------------------------
-
-type DocumentManagerModalProps = {
-  t: WorkbookTranslator;
-  documents: DocumentMeta[];
-  activeDocumentId: string | null;
-  onSwitchDocument: (docId: string) => void;
-  onRenameDocument: (docId: string, name: string) => void;
-  onDuplicateDocument: (docId: string) => void;
-  onDeleteDocument: (docId: string) => void;
-  onExportDocument: (docId: string) => void;
-  onImportDocument: () => void;
-  onClose: () => void;
-};
-
-export function DocumentManagerModal({
-  t,
-  documents,
-  activeDocumentId,
-  onSwitchDocument,
-  onRenameDocument,
-  onDuplicateDocument,
-  onDeleteDocument,
-  onExportDocument,
-  onImportDocument,
-  onClose
-}: DocumentManagerModalProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
-
-  function startRename(doc: DocumentMeta) {
-    setEditingId(doc.id);
-    setEditingName(doc.name);
-  }
-
-  function commitRename() {
-    if (editingId && editingName.trim()) {
-      onRenameDocument(editingId, editingName.trim());
-    }
-
-    setEditingId(null);
-    setEditingName("");
-  }
-
-  return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
-      <section className="block-modal document-manager-modal" role="dialog" aria-modal="true" aria-labelledby="doc-manager-title" onClick={(event) => event.stopPropagation()}>
-        <div className="block-modal-head">
-          <div>
-            <h2 id="doc-manager-title">{t("documentManager.title")}</h2>
-          </div>
-          <div className="card-actions">
-            <button type="button" className="small-action" onClick={onImportDocument}>
-              {t("documentManager.importFile")}
-            </button>
-            <button type="button" className="small-action" onClick={onClose}>
-              {t("documentManager.close")}
-            </button>
-          </div>
-        </div>
-        <div className="document-manager-list">
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              className={`document-manager-item${doc.id === activeDocumentId ? " document-manager-item-active" : ""}`}
-              onClick={() => { if (doc.id !== activeDocumentId) onSwitchDocument(doc.id); }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => { if (event.key === "Enter" && doc.id !== activeDocumentId) onSwitchDocument(doc.id); }}
-            >
-              <div className="document-manager-item-info">
-                {editingId === doc.id ? (
-                  <input
-                    className="document-manager-rename-input"
-                    type="text"
-                    value={editingName}
-                    onChange={(event) => setEditingName(event.target.value)}
-                    onBlur={commitRename}
-                    onKeyDown={(event) => { if (event.key === "Enter") commitRename(); if (event.key === "Escape") setEditingId(null); }}
-                    onClick={(event) => event.stopPropagation()}
-                    autoFocus
-                  />
-                ) : (
-                  <span className="document-manager-item-name">{doc.name}</span>
-                )}
-                <span className="document-manager-item-date">
-                  {t("documentManager.modified")}: {new Date(doc.updatedAt).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="document-manager-actions" onClick={(event) => event.stopPropagation()}>
-                <button type="button" className="small-action" onClick={() => startRename(doc)} title={t("documentManager.rename")}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                  </svg>
-                </button>
-                <button type="button" className="small-action" onClick={() => onDuplicateDocument(doc.id)} title={t("documentManager.duplicate")}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                  </svg>
-                </button>
-                <button type="button" className="small-action" onClick={() => onExportDocument(doc.id)} title={t("documentManager.exportFile")}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className="small-action"
-                  onClick={() => onDeleteDocument(doc.id)}
-                  title={t("documentManager.delete")}
-                  disabled={documents.length <= 1}
-                >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Confirm Delete Document Modal
-// ---------------------------------------------------------------------------
-
-type ConfirmDeleteDocumentModalProps = {
-  t: WorkbookTranslator;
-  onClose: () => void;
-  onConfirm: () => void;
-};
-
-export function ConfirmDeleteDocumentModal({t, onClose, onConfirm}: ConfirmDeleteDocumentModalProps) {
-  return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
-      <section className="block-modal" role="dialog" aria-modal="true" aria-labelledby="delete-doc-modal-title" onClick={(event) => event.stopPropagation()}>
-        <div className="block-modal-head">
-          <div>
-            <p className="card-kind">{t("modal.confirmation")}</p>
-            <h2 id="delete-doc-modal-title">{t("documentManager.deleteConfirm")}</h2>
-            <p className="toolbar-helper">{t("documentManager.deleteHelper")}</p>
-          </div>
-          <div className="card-actions">
-            <button type="button" className="small-action" onClick={onClose}>
-              {t("modal.cancel")}
-            </button>
-            <button type="button" className="small-action primary-inline-action" onClick={onConfirm}>
-              {t("documentManager.delete")}
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
