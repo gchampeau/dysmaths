@@ -1,4 +1,4 @@
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import type {CSSProperties as ReactCSSProperties, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject} from "react";
 import {localeLabels, type AppLocale} from "@/i18n/routing";
@@ -52,6 +52,7 @@ import {
   type UserProfile,
   type WorkbookTranslator
 } from "@/components/math-workbook/shared";
+import type {PageMeta} from "@/components/math-workbook/document-store";
 
 type WorkbookSidebarProps = {
   t: WorkbookTranslator;
@@ -717,6 +718,8 @@ type WorkbookActionBarProps = {
   sheetStyleOptions: SheetStyleOption[];
   profiles: UserProfile[];
   activeProfileId: string | null;
+  pages: PageMeta[];
+  activePageId: string | null;
   onOpenTools: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -724,7 +727,12 @@ type WorkbookActionBarProps = {
   onExportPng: () => void;
   onPrint: () => void;
   onSheetStyleChange: (sheetStyle: SheetStyle) => void;
-  onResetDocument: () => void;
+  onNewPage: () => void;
+  onSwitchPage: (pageId: string) => void;
+  onDeletePage: (pageId: string) => void;
+  onDeleteAllPages: () => void;
+  onExportFile: () => void;
+  onImportFile: () => void;
   onProfileChange: (profileId: string | null) => void;
   onSetProfileEditMode: (mode: "create" | "edit" | null) => void;
 };
@@ -744,13 +752,41 @@ export function WorkbookActionBar({
   onExportPng,
   onPrint,
   onSheetStyleChange,
-  onResetDocument,
+  pages,
+  activePageId,
+  onNewPage,
+  onSwitchPage,
+  onDeletePage,
+  onDeleteAllPages,
+  onExportFile,
+  onImportFile,
   profiles,
   activeProfileId,
   onProfileChange,
   onSetProfileEditMode
 }: WorkbookActionBarProps) {
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const [pageMenuOpen, setPageMenuOpen] = useState(false);
+  const pageMenuRef = useRef<HTMLDivElement>(null);
+  const fileMenuRef = useRef<HTMLDivElement>(null);
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
+
+  useEffect(() => {
+    if (!fileMenuOpen && !pageMenuOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (fileMenuOpen && fileMenuRef.current && !fileMenuRef.current.contains(target)) {
+        setFileMenuOpen(false);
+      }
+      if (pageMenuOpen && pageMenuRef.current && !pageMenuRef.current.contains(target)) {
+        setPageMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [fileMenuOpen, pageMenuOpen]);
   const initials = activeProfile ? `${activeProfile.firstName.charAt(0)}${activeProfile.lastName.charAt(0)}`.toUpperCase() : null;
 
   function handleSwitcherChange(value: string) {
@@ -760,6 +796,7 @@ export function WorkbookActionBar({
       onProfileChange(value || null);
     }
   }
+
   return (
     <div className="sheet-action-bar">
       <div className="sheet-action-group">
@@ -807,9 +844,89 @@ export function WorkbookActionBar({
             ))}
           </select>
         </label>
-        <button type="button" className="toolbar-action ghost" onClick={onResetDocument}>
-          {t("toolbar.newDocument")}
+        <button type="button" className="toolbar-action ghost" onClick={onNewPage}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          {t("pages.newPage")}
         </button>
+        {pages.length > 1 ? (
+          <div className="page-navigator" ref={pageMenuRef} aria-label={t("pages.page")}>
+            <button type="button" className="page-nav-toggle" onClick={() => setPageMenuOpen(!pageMenuOpen)}>
+              {t("pages.page")} {pages.findIndex((p) => p.id === activePageId) + 1}/{pages.length}
+              <svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true">
+                <path d="M0 0l5 6 5-6z" fill="currentColor" opacity="0.5" />
+              </svg>
+            </button>
+            {pageMenuOpen ? (
+              <div className="page-menu-dropdown" role="menu">
+                  {pages.map((page, index) => (
+                    <button
+                      key={page.id}
+                      type="button"
+                      className={`file-menu-item${page.id === activePageId ? " page-menu-item-active" : ""}`}
+                      role="menuitem"
+                      onClick={() => { onSwitchPage(page.id); setPageMenuOpen(false); }}
+                    >
+                      {t("pages.page")} {index + 1}
+                    </button>
+                  ))}
+                </div>
+            ) : null}
+            <button
+              type="button"
+              className="page-nav-delete"
+              onClick={() => onDeletePage(activePageId!)}
+              title={t("pages.deletePage")}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        ) : null}
+        <div className="file-menu-wrapper" ref={fileMenuRef}>
+          <button type="button" className="toolbar-action ghost file-menu-toggle" onClick={() => setFileMenuOpen(!fileMenuOpen)} title={t("pages.fileMenu")}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          </button>
+          {fileMenuOpen ? (
+              <div className="file-menu-dropdown" role="menu">
+                <button type="button" className="file-menu-item" role="menuitem" onClick={() => { onExportFile(); setFileMenuOpen(false); }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  {t("pages.exportFile")}
+                </button>
+                <button type="button" className="file-menu-item" role="menuitem" onClick={() => { onImportFile(); setFileMenuOpen(false); }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  {t("pages.importFile")}
+                </button>
+                {pages.length > 1 ? (
+                  <>
+                    <hr className="file-menu-separator" />
+                    <button type="button" className="file-menu-item file-menu-item-danger" role="menuitem" onClick={() => { onDeleteAllPages(); setFileMenuOpen(false); }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      {t("pages.deleteAll")}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+          ) : null}
+        </div>
         <div className="profile-switcher" title={t("profile.switcherHint")}>
           <select
             className="profile-switcher-select"
@@ -1684,3 +1801,4 @@ export function ProfileModal({ t, mode, profile, sheetStyleOptions, onSave, onCl
     </div>
   );
 }
+

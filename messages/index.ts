@@ -65,6 +65,19 @@ type Messages = {
       install: string;
       installHelp: string;
     };
+    pages: {
+      newPage: string;
+      deletePage: string;
+      deletePageConfirm: string;
+      deleteAll: string;
+      deleteAllConfirm: string;
+      page: string;
+      exportFile: string;
+      importFile: string;
+      importError: string;
+      untitled: string;
+      fileMenu: string;
+    };
     geometryHelper: {
       idle: string;
       protractorFirstSide: string;
@@ -296,6 +309,19 @@ const en: Messages = {
       settings: "Settings",
       install: "Install",
       installHelp: "Use the install icon in the address bar or your browser menu to install the app on this device."
+    },
+    pages: {
+      newPage: "New",
+      deletePage: "Delete",
+      deletePageConfirm: "Delete this page?",
+      deleteAll: "Delete all pages",
+      deleteAllConfirm: "Delete all pages and start fresh?",
+      page: "Page",
+      exportFile: "Save as file",
+      importFile: "Open a file",
+      importError: "Could not read this file.",
+      untitled: "Untitled",
+      fileMenu: "File"
     },
     geometryHelper: {
       idle: "Draw precise figures while preserving the sheet scale for printing.",
@@ -538,6 +564,19 @@ const fr: Messages = {
       install: "Installer",
       installHelp: "Utilise l’icône d’installation dans la barre d’adresse ou le menu du navigateur pour installer l’app sur cet appareil."
     },
+    pages: {
+      newPage: "Nouveau",
+      deletePage: "Supprimer",
+      deletePageConfirm: "Supprimer cette page ?",
+      deleteAll: "Supprimer toutes les pages",
+      deleteAllConfirm: "Supprimer toutes les pages et recommencer ?",
+      page: "Page",
+      exportFile: "Enregistrer en fichier",
+      importFile: "Ouvrir un fichier",
+      importError: "Impossible de lire ce fichier.",
+      untitled: "Sans titre",
+      fileMenu: "Fichier"
+    },
     geometryHelper: {
       idle: "Trace des figures précises en gardant l’échelle de la feuille pour l’impression.",
       protractorFirstSide: "Clique un point sur le premier côté de l’angle.",
@@ -778,6 +817,19 @@ const es: Messages = {
       settings: "Ajustes",
       install: "Instalar",
       installHelp: "Usa el icono de instalación de la barra de direcciones o el menú del navegador para instalar la app en este dispositivo."
+    },
+    pages: {
+      newPage: "Nuevo",
+      deletePage: "Eliminar",
+      deletePageConfirm: "¿Eliminar esta página?",
+      deleteAll: "Eliminar todas las páginas",
+      deleteAllConfirm: "¿Eliminar todas las páginas y empezar de nuevo?",
+      page: "Página",
+      exportFile: "Guardar como archivo",
+      importFile: "Abrir un archivo",
+      importError: "No se pudo leer este archivo.",
+      untitled: "Sin título",
+      fileMenu: "Archivo"
     },
     geometryHelper: {
       idle: "Traza figuras precisas manteniendo la escala de la hoja para la impresión.",

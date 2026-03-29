@@ -9,6 +9,7 @@
     "start": "node scripts/run-next.cjs start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "@lexical/rich-text": "^0.41.0",
     "@lexical/selection": "^0.41.0",
     "@lexical/utils": "^0.41.0",
+    "@swc/helpers": "^0.5.20",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
@@ -35,8 +37,11 @@
     "@types/node": "^22.13.10",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.1",
-    "typescript": "^5.8.2"
+    "jsdom": "^29.0.1",
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.2"
   }
 }

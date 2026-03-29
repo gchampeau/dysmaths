@@ -44,6 +44,18 @@ import {
   WorkbookActionBar,
   WorkbookSidebar
 } from "@/components/math-workbook/presentational";
+import {
+  type PageIndex,
+  loadPageIndex,
+  savePageIndex,
+  loadPageState,
+  savePageState,
+  createPage,
+  deletePage,
+  migrateFromLegacyStorage,
+  exportPageToFile,
+  parseImportedFile
+} from "@/components/math-workbook/document-store";
 import type {
   StudyMode,
   SheetStyle,
@@ -111,9 +123,7 @@ import type {
   ProfileStore
 } from "@/components/math-workbook/shared";
 import {
-  STORAGE_KEY,
   PROFILE_STORAGE_KEY,
-  WRITER_STATE_SCHEMA_VERSION,
   FLOATING_TEXTBOX_Y_OFFSET,
   CANVAS_QUICK_MENU_OFFSET_X,
   MAX_HISTORY_STEPS,
@@ -203,7 +213,6 @@ import {
   areWriterStatesEqual,
   getGridDimensions,
   getRemPixels,
-  parseStoredState,
   parseStoredProfiles,
   getDocumentLabelsForProfile,
   getDefaultWidth,
@@ -304,6 +313,9 @@ export function MathWorkbook() {
   const [isInstalledApp, setIsInstalledApp] = useState(false);
   const [profileStore, setProfileStore] = useState<ProfileStore>({ profiles: [], activeProfileId: null });
   const [profileEditMode, setProfileEditMode] = useState<"create" | "edit" | null>(null);
+  const [pageIndex, setPageIndex] = useState<PageIndex>({ version: 1, activePageId: null, pages: [] });
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeProfile = useMemo(
     () => profileStore.profiles.find((p) => p.id === profileStore.activeProfileId) ?? null,
     [profileStore]
@@ -750,21 +762,33 @@ export function MathWorkbook() {
   }, [pendingInsertTool, activeInlineShortcuts, activeStructuredTools, t, workbookUi.blockTitles.default]);
 
   useEffect(() => {
+    let index = loadPageIndex();
+
+    if (index.pages.length === 0) {
+      index = migrateFromLegacyStorage(defaultSheetStyle, workbookUi.defaultDocumentLabels);
+    }
+
+    if (index.pages.length === 0) {
+      const defaultState = createDefaultState(defaultSheetStyle, workbookUi.defaultDocumentLabels);
+      createPage(workbookUi.defaultDocumentLabels.title, defaultState);
+      index = loadPageIndex();
+    }
+
+    const activeId = index.activePageId ?? index.pages[0]?.id;
+
+    if (activeId) {
+      const loaded = loadPageState(activeId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+
+      if (loaded) {
+        setState(loaded);
+      }
+
+      index = { ...index, activePageId: activeId };
+      savePageIndex(index);
+    }
+
+    setPageIndex(index);
     setIsHydrated(true);
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return;
-    }
-
-    const parsed = parseStoredState(saved, defaultSheetStyle, workbookUi.defaultDocumentLabels);
-
-    if (!parsed) {
-      window.localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-
-    setState(parsed);
   }, [defaultSheetStyle, workbookUi.defaultDocumentLabels]);
 
   useEffect(() => {
@@ -780,12 +804,12 @@ export function MathWorkbook() {
   }, []);
 
   useEffect(() => {
-    if (!isHydrated) {
+    if (!isHydrated || !pageIndex.activePageId) {
       return;
     }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [isHydrated, state]);
+    savePageState(pageIndex.activePageId, state);
+  }, [isHydrated, state, pageIndex.activePageId]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(PROFILE_STORAGE_KEY);
@@ -4872,14 +4896,9 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
     return renderBasicInlineEditor(block as FractionBlock | PowerBlock | RootBlock, bindInlineInput as never);
   }
-  function resetDocument() {
-    setConfirmResetState({ open: true });
-  }
-
-  function confirmResetDocument() {
+  function createProfileAwareDefaultState(): WriterState {
     const labels = getDocumentLabelsForProfile(activeProfile, workbookUi.defaultDocumentLabels, locale);
     const sheetStyle = activeProfile?.preferredSheetStyle ?? defaultSheetStyle;
-    window.localStorage.removeItem(STORAGE_KEY);
     const newState = createDefaultState(sheetStyle, labels);
 
     if (activeProfile) {
@@ -4894,17 +4913,118 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
       newState.textBoxes = applyHeaderPositions(newState.textBoxes, activeProfile);
     }
 
+    return newState;
+  }
+
+  function confirmResetDocument() {
+    const newState = createProfileAwareDefaultState();
+    clearTransientState();
     setState(newState);
+    setConfirmResetState(null);
+  }
+
+  function clearTransientState() {
     setOpenMenu(null);
     setCanvasQuickMenu(null);
     setModalState(null);
-    clearGraduatedLineDraftState();
     setConfirmResetState(null);
+    clearGraduatedLineDraftState();
     clearFloatingSelection();
     selectionRef.current = null;
+    setEditingBlock(null);
+    setEditingTextBoxId(null);
+    setHistoryPast([]);
+    setHistoryFuture([]);
     if (editorRef.current) {
       editorRef.current.innerHTML = DEFAULT_TEXT_HTML;
     }
+  }
+
+  function handleSwitchPage(pageId: string) {
+    if (pageId === pageIndex.activePageId) return;
+
+    const loaded = loadPageState(pageId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+    if (!loaded) return;
+
+    clearTransientState();
+    setState(loaded);
+
+    const newIndex = { ...pageIndex, activePageId: pageId };
+    savePageIndex(newIndex);
+    setPageIndex(newIndex);
+  }
+
+  function handleNewPage() {
+    const newState = createProfileAwareDefaultState();
+    createPage(newState.title, newState);
+    clearTransientState();
+    setState(newState);
+    setPageIndex(loadPageIndex());
+  }
+
+  function handleDeletePage(pageId: string) {
+    if (pageIndex.pages.length <= 1) return;
+    if (!window.confirm(t("pages.deletePageConfirm"))) return;
+
+    const wasActive = pageId === pageIndex.activePageId;
+    deletePage(pageId);
+    const newIndex = loadPageIndex();
+    setPageIndex(newIndex);
+
+    if (wasActive && newIndex.pages.length > 0) {
+      handleSwitchPage(newIndex.activePageId ?? newIndex.pages[0].id);
+    }
+  }
+
+  function handleDeleteAllPages() {
+    setConfirmDeleteAllOpen(true);
+  }
+
+  function confirmDeleteAllPages() {
+    for (const page of pageIndex.pages) {
+      deletePage(page.id);
+    }
+
+    handleNewPage();
+    setConfirmDeleteAllOpen(false);
+  }
+
+  function handleExportFile() {
+    const targetId = pageIndex.activePageId;
+    if (!targetId) return;
+
+    const meta = pageIndex.pages.find((d) => d.id === targetId);
+    if (!meta) return;
+
+    exportPageToFile(meta, state);
+  }
+
+  function handleImportFile() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileInputChange(event: ReactChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = reader.result as string;
+      const result = parseImportedFile(raw, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+
+      if (!result) {
+        window.alert(t("pages.importError"));
+        return;
+      }
+
+      createPage(result.name, result.state);
+      clearTransientState();
+      setState(result.state);
+      setPageIndex(loadPageIndex());
+    };
+
+    reader.readAsText(file);
+    event.target.value = "";
   }
 
   function applyHeaderPositions(textBoxes: FloatingTextBox[], profile: UserProfile): FloatingTextBox[] {
@@ -5311,6 +5431,8 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           isExporting={isExporting}
           sheetStyle={state.sheetStyle}
           sheetStyleOptions={workbookUi.sheetStyleOptions}
+          pages={pageIndex.pages}
+          activePageId={pageIndex.activePageId}
           onOpenTools={() => setIsToolsPanelOpen(true)}
           onUndo={undoHistory}
           onRedo={redoHistory}
@@ -5318,7 +5440,12 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           onExportPng={exportPng}
           onPrint={printSheet}
           onSheetStyleChange={(sheetStyle) => setState((current) => ({...current, sheetStyle}))}
-          onResetDocument={resetDocument}
+          onNewPage={handleNewPage}
+          onSwitchPage={handleSwitchPage}
+          onDeletePage={handleDeletePage}
+          onDeleteAllPages={handleDeleteAllPages}
+          onExportFile={handleExportFile}
+          onImportFile={handleImportFile}
           profiles={profileStore.profiles}
           activeProfileId={profileStore.activeProfileId}
           onProfileChange={handleProfileChange}
@@ -5825,6 +5952,34 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         confirmResetState={confirmResetState}
         onClose={() => setConfirmResetState(null)}
         onConfirm={confirmResetDocument}
+      />
+      {confirmDeleteAllOpen ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setConfirmDeleteAllOpen(false)}>
+          <section className="block-modal" role="dialog" aria-modal="true" aria-labelledby="delete-all-modal-title" onClick={(event) => event.stopPropagation()}>
+            <div className="block-modal-head">
+              <div>
+                <p className="card-kind">{t("modal.confirmation")}</p>
+                <h2 id="delete-all-modal-title">{t("pages.deleteAll")}</h2>
+                <p className="toolbar-helper">{t("pages.deleteAllConfirm")}</p>
+              </div>
+              <div className="card-actions">
+                <button type="button" className="small-action" onClick={() => setConfirmDeleteAllOpen(false)}>
+                  {t("modal.cancel")}
+                </button>
+                <button type="button" className="small-action primary-inline-action" onClick={confirmDeleteAllPages}>
+                  {t("pages.deleteAll")}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".dysmaths,.json"
+        style={{ display: "none" }}
+        onChange={handleFileInputChange}
       />
       {profileEditMode ? (
         <ProfileModal

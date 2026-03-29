@@ -4035,3 +4035,136 @@ input {
     page-break-inside: avoid;
   }
 }
+
+/* -----------------------------------------------------------------------
+   Page navigator (custom dropdown + delete)
+   ----------------------------------------------------------------------- */
+
+.page-navigator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.page-nav-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid rgba(92, 108, 129, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 252, 247, 0.94);
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 2rem;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+
+.page-nav-toggle:hover {
+  background: rgba(92, 108, 129, 0.06);
+}
+
+.page-menu-dropdown,
+.file-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  bottom: auto;
+  z-index: 100;
+  padding: 0.3rem;
+  border: 1px solid rgba(92, 108, 129, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.page-menu-dropdown {
+  left: 0;
+  right: auto;
+  min-width: 8rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.page-menu-item-active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 700;
+}
+
+.page-nav-delete {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid rgba(92, 108, 129, 0.12);
+  border-radius: 8px;
+  background: none;
+  color: color-mix(in srgb, var(--ink) 35%, transparent);
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+
+.page-nav-delete:hover {
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.08);
+  border-color: rgba(192, 57, 43, 0.15);
+}
+
+/* -----------------------------------------------------------------------
+   File menu dropdown
+   ----------------------------------------------------------------------- */
+
+.file-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.file-menu-dropdown {
+  right: 0;
+  left: auto;
+  min-width: 12rem;
+}
+
+.file-menu-item {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.file-menu-item:hover {
+  background: rgba(92, 108, 129, 0.06);
+}
+
+.file-menu-item-danger {
+  color: #c0392b;
+}
+
+.file-menu-item-danger:hover {
+  background: rgba(192, 57, 43, 0.06);
+}
+
+.file-menu-separator {
+  border: none;
+  border-top: 1px solid rgba(92, 108, 129, 0.1);
+  margin: 0.2rem 0.4rem;
+}
