@@ -18,6 +18,7 @@
     "@lexical/rich-text": "^0.41.0",
     "@lexical/selection": "^0.41.0",
     "@lexical/utils": "^0.41.0",
+    "@swc/helpers": "^0.5.20",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
