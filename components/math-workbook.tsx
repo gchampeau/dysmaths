@@ -35,6 +35,7 @@ import {
 import {
   CanvasQuickInsertMenu,
   ConfirmResetModal,
+  DocumentPageBar,
   ProfileModal,
   GeometrySettingsMenu,
   GraduatedLineModal,
@@ -647,7 +648,6 @@ export function MathWorkbook() {
   const [profileStore, setProfileStore] = useState<ProfileStore>({ profiles: [], activeProfileId: null });
   const [profileEditMode, setProfileEditMode] = useState<"create" | "edit" | null>(null);
   const [pageIndex, setPageIndex] = useState<PageIndex>({ version: 1, activePageId: null, pages: [] });
-  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sheetImportInputRef = useRef<HTMLInputElement>(null);
   const pdfImportDocumentRef = useRef<PdfImportDocument | null>(null);
@@ -1163,7 +1163,7 @@ export function MathWorkbook() {
     }
 
     if (index.pages.length === 0) {
-      const defaultState = createDefaultState(defaultSheetStyle, workbookUi.defaultDocumentLabels);
+      const defaultState = createDefaultState(defaultSheetStyle, workbookUi.defaultDocumentLabels, true);
       createPage(workbookUi.defaultDocumentLabels.title, defaultState);
       index = loadPageIndex();
     }
@@ -4480,15 +4480,7 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     finishBlockEditing(blockId);
   }
 
-  function isHeaderTextBox(textBoxId: string) {
-    return state.textBoxes.some((textBox) => textBox.id === textBoxId && textBox.headerField);
-  }
-
   function removeTextBox(textBoxId: string) {
-    if (isHeaderTextBox(textBoxId)) {
-      return;
-    }
-
     setState((current) => ({
       ...current,
       textBoxes: current.textBoxes.filter((textBox) => textBox.id !== textBoxId)
@@ -5290,10 +5282,10 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
     return renderBasicInlineEditor(block as FractionBlock | PowerBlock | RootBlock, bindInlineInput as never);
   }
-  function createProfileAwareDefaultState(): WriterState {
+  function createProfileAwareDefaultState(includeDefaultHeaderTextBoxes = false): WriterState {
     const labels = getDocumentLabelsForProfile(activeProfile, workbookUi.defaultDocumentLabels, locale);
     const sheetStyle = activeProfile?.preferredSheetStyle ?? defaultSheetStyle;
-    const newState = createDefaultState(sheetStyle, labels);
+    const newState = createDefaultState(sheetStyle, labels, includeDefaultHeaderTextBoxes);
 
     if (activeProfile) {
       newState.mode = activeProfile.preferredMode;
@@ -5311,9 +5303,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
   }
 
   function confirmResetDocument() {
-    const newState = createProfileAwareDefaultState();
+    const newState = createProfileAwareDefaultState(true);
+
+    for (const page of loadPageIndex().pages) {
+      deletePage(page.id);
+    }
+
+    createPage(newState.title, newState);
     clearTransientState();
     setState(newState);
+    setPageIndex(loadPageIndex());
     setConfirmResetState(null);
   }
 
@@ -5334,8 +5333,10 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     }
   }
 
-  function handleSwitchPage(pageId: string) {
-    if (pageId === pageIndex.activePageId) return;
+  function switchToPage(pageId: string, sourceIndex?: PageIndex, forceReload = false) {
+    const baseIndex = sourceIndex ?? loadPageIndex();
+
+    if (!forceReload && pageId === baseIndex.activePageId) return;
 
     const loaded = loadPageState(pageId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
     if (!loaded) return;
@@ -5343,17 +5344,25 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     clearTransientState();
     setState(loaded);
 
-    const newIndex = { ...pageIndex, activePageId: pageId };
+    const newIndex = { ...baseIndex, activePageId: pageId };
     savePageIndex(newIndex);
     setPageIndex(newIndex);
   }
 
+  function handleSwitchPage(pageId: string) {
+    switchToPage(pageId);
+  }
+
   function handleNewPage() {
-    const newState = createProfileAwareDefaultState();
+    const newState = createProfileAwareDefaultState(false);
     createPage(newState.title, newState);
     clearTransientState();
     setState(newState);
     setPageIndex(loadPageIndex());
+  }
+
+  function handleNewDocument() {
+    setConfirmResetState({open: true});
   }
 
   function handleDeletePage(pageId: string) {
@@ -5363,24 +5372,13 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     const wasActive = pageId === pageIndex.activePageId;
     deletePage(pageId);
     const newIndex = loadPageIndex();
-    setPageIndex(newIndex);
 
     if (wasActive && newIndex.pages.length > 0) {
-      handleSwitchPage(newIndex.activePageId ?? newIndex.pages[0].id);
-    }
-  }
-
-  function handleDeleteAllPages() {
-    setConfirmDeleteAllOpen(true);
-  }
-
-  function confirmDeleteAllPages() {
-    for (const page of pageIndex.pages) {
-      deletePage(page.id);
+      switchToPage(newIndex.activePageId ?? newIndex.pages[0].id, newIndex, true);
+      return;
     }
 
-    handleNewPage();
-    setConfirmDeleteAllOpen(false);
+    setPageIndex(newIndex);
   }
 
   function handleExportFile() {
@@ -5395,15 +5393,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
 
   function handleImportFile() {
     fileInputRef.current?.click();
-  }
-
-  function getImportedSheetSummary(background: ImportedSheetBackground | null) {
-    if (!background) {
-      return null;
-    }
-
-    const pageLabel = background.pageNumber ? ` • ${t("pages.importedSheetPage", {page: background.pageNumber})}` : "";
-    return `${t("pages.importedSheetSummary", {name: background.sourceName})}${pageLabel}`;
   }
 
   function destroyPdfImportDocument() {
@@ -5501,14 +5490,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     }
 
     setState((current) => ({...current, sheetStyle: nextStyle}));
-  }
-
-  function handleClearImportedSheetBackground() {
-    setState((current) => ({
-      ...current,
-      sheetBackground: null,
-      sheetStyle: current.sheetStyle === "imported" ? defaultSheetStyle : current.sheetStyle
-    }));
   }
 
   function handleFileInputChange(event: ReactChangeEvent<HTMLInputElement>) {
@@ -5939,10 +5920,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           isExporting={isExporting}
           sheetStyle={state.sheetStyle}
           sheetStyleOptions={workbookUi.sheetStyleOptions}
-          hasImportedSheetBackground={Boolean(state.sheetBackground)}
-          importedSheetSummary={getImportedSheetSummary(state.sheetBackground)}
-          pages={pageIndex.pages}
-          activePageId={pageIndex.activePageId}
           onOpenTools={() => setIsToolsPanelOpen(true)}
           onUndo={undoHistory}
           onRedo={redoHistory}
@@ -5950,21 +5927,26 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
           onExportPng={exportPng}
           onPrint={printSheet}
           onSheetStyleChange={handleSheetStyleChange}
-          onImportSheetBackground={handleOpenSheetImport}
-          onClearImportedSheetBackground={handleClearImportedSheetBackground}
-          onNewPage={handleNewPage}
-          onSwitchPage={handleSwitchPage}
-          onDeletePage={handleDeletePage}
-          onDeleteAllPages={handleDeleteAllPages}
-          onExportFile={handleExportFile}
-          onImportFile={handleImportFile}
+          onNewDocument={handleNewDocument}
           profiles={profileStore.profiles}
           activeProfileId={profileStore.activeProfileId}
           onProfileChange={handleProfileChange}
           onSetProfileEditMode={(mode) => { setProfileEditMode(mode); if (mode) setOpenMenu(null); }}
-        />
+        /> 
 
         <div className="editor-sheet">
+          {pageIndex.pages.length > 1 ? (
+            <DocumentPageBar
+              t={t}
+              pages={pageIndex.pages}
+              activePageId={pageIndex.activePageId}
+              onAddPage={handleNewPage}
+              onSwitchPage={handleSwitchPage}
+              onDeletePage={handleDeletePage}
+              onExportFile={handleExportFile}
+              onImportFile={handleImportFile}
+            />
+          ) : null}
           <div className="document-canvas-viewport">
             <div className="document-canvas-stage">
               <div
@@ -6434,6 +6416,16 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               </div>
             </div>
           </div>
+          {pageIndex.pages.length <= 1 ? (
+            <DocumentPageBar
+              t={t}
+              pages={pageIndex.pages}
+              activePageId={pageIndex.activePageId}
+              onAddPage={handleNewPage}
+              onSwitchPage={handleSwitchPage}
+              onDeletePage={handleDeletePage}
+            />
+          ) : null}
         </div>
       </section>
 
@@ -6475,27 +6467,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
         onClose={() => setConfirmResetState(null)}
         onConfirm={confirmResetDocument}
       />
-      {confirmDeleteAllOpen ? (
-        <div className="modal-backdrop" role="presentation" onClick={() => setConfirmDeleteAllOpen(false)}>
-          <section className="block-modal" role="dialog" aria-modal="true" aria-labelledby="delete-all-modal-title" onClick={(event) => event.stopPropagation()}>
-            <div className="block-modal-head">
-              <div>
-                <p className="card-kind">{t("modal.confirmation")}</p>
-                <h2 id="delete-all-modal-title">{t("pages.deleteAll")}</h2>
-                <p className="toolbar-helper">{t("pages.deleteAllConfirm")}</p>
-              </div>
-              <div className="card-actions">
-                <button type="button" className="small-action" onClick={() => setConfirmDeleteAllOpen(false)}>
-                  {t("modal.cancel")}
-                </button>
-                <button type="button" className="small-action primary-inline-action" onClick={confirmDeleteAllPages}>
-                  {t("pages.deleteAll")}
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
-      ) : null}
       {pdfImportModalState ? (
         <div className="modal-backdrop" role="presentation" onClick={closePdfImportModal}>
           <section className="block-modal imported-sheet-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-import-title" onClick={(event) => event.stopPropagation()}>

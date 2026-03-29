@@ -68,6 +68,7 @@ type Messages = {
     pages: {
       newPage: string;
       deletePage: string;
+      removeThisPage: string;
       deletePageConfirm: string;
       deleteAll: string;
       deleteAllConfirm: string;
@@ -76,10 +77,7 @@ type Messages = {
       importFile: string;
       importError: string;
       importSheet: string;
-      replaceImportedSheet: string;
-      clearImportedSheet: string;
       importSheetError: string;
-      importedSheetSummary: string;
       importedSheetPage: string;
       importPdfTitle: string;
       importPdfHelper: string;
@@ -90,6 +88,7 @@ type Messages = {
       loadingPreview: string;
       untitled: string;
       fileMenu: string;
+      fileMenuLabel: string;
     };
     geometryHelper: {
       idle: string;
@@ -325,8 +324,9 @@ const en: Messages = {
       installHelp: "Use the install icon in the address bar or your browser menu to install the app on this device."
     },
     pages: {
-      newPage: "New",
+      newPage: "Add page",
       deletePage: "Delete",
+      removeThisPage: "Remove this page",
       deletePageConfirm: "Delete this page?",
       deleteAll: "Delete all pages",
       deleteAllConfirm: "Delete all pages and start fresh?",
@@ -335,10 +335,7 @@ const en: Messages = {
       importFile: "Open a file",
       importError: "Could not read this file.",
       importSheet: "Import",
-      replaceImportedSheet: "Replace import",
-      clearImportedSheet: "Remove import",
       importSheetError: "Could not import this image or PDF page.",
-      importedSheetSummary: "Imported: {name}",
       importedSheetPage: "Page {page}",
       importPdfTitle: "Choose a PDF page",
       importPdfHelper: "The PDF stays on this device. Only the selected page is rendered and saved as the sheet background.",
@@ -348,7 +345,8 @@ const en: Messages = {
       importThisPage: "Use this page",
       loadingPreview: "Loading preview...",
       untitled: "Untitled",
-      fileMenu: "File"
+      fileMenu: "File",
+      fileMenuLabel: "Import / Export"
     },
     geometryHelper: {
       idle: "Draw precise figures while preserving the sheet scale for printing.",
@@ -593,8 +591,9 @@ const fr: Messages = {
       installHelp: "Utilise l’icône d’installation dans la barre d’adresse ou le menu du navigateur pour installer l’app sur cet appareil."
     },
     pages: {
-      newPage: "Nouveau",
+      newPage: "Ajouter une page",
       deletePage: "Supprimer",
+      removeThisPage: "Retirer cette page",
       deletePageConfirm: "Supprimer cette page ?",
       deleteAll: "Supprimer toutes les pages",
       deleteAllConfirm: "Supprimer toutes les pages et recommencer ?",
@@ -603,10 +602,7 @@ const fr: Messages = {
       importFile: "Ouvrir un fichier",
       importError: "Impossible de lire ce fichier.",
       importSheet: "Importer",
-      replaceImportedSheet: "Remplacer l'import",
-      clearImportedSheet: "Retirer l'import",
       importSheetError: "Impossible d'importer cette image ou cette page PDF.",
-      importedSheetSummary: "Importé : {name}",
       importedSheetPage: "Page {page}",
       importPdfTitle: "Choisir une page du PDF",
       importPdfHelper: "Le PDF reste sur cet appareil. Seule la page choisie est rendue et enregistrée comme fond de feuille.",
@@ -616,7 +612,8 @@ const fr: Messages = {
       importThisPage: "Utiliser cette page",
       loadingPreview: "Chargement de l'aperçu...",
       untitled: "Sans titre",
-      fileMenu: "Fichier"
+      fileMenu: "Fichier",
+      fileMenuLabel: "Importer/Exporter"
     },
     geometryHelper: {
       idle: "Trace des figures précises en gardant l’échelle de la feuille pour l’impression.",
@@ -861,8 +858,9 @@ const es: Messages = {
       installHelp: "Usa el icono de instalación de la barra de direcciones o el menú del navegador para instalar la app en este dispositivo."
     },
     pages: {
-      newPage: "Nuevo",
+      newPage: "Agregar página",
       deletePage: "Eliminar",
+      removeThisPage: "Retirar esta página",
       deletePageConfirm: "¿Eliminar esta página?",
       deleteAll: "Eliminar todas las páginas",
       deleteAllConfirm: "¿Eliminar todas las páginas y empezar de nuevo?",
@@ -871,10 +869,7 @@ const es: Messages = {
       importFile: "Abrir un archivo",
       importError: "No se pudo leer este archivo.",
       importSheet: "Importar",
-      replaceImportedSheet: "Reemplazar importación",
-      clearImportedSheet: "Quitar importación",
       importSheetError: "No se pudo importar esta imagen o esta página PDF.",
-      importedSheetSummary: "Importado: {name}",
       importedSheetPage: "Página {page}",
       importPdfTitle: "Elegir una página del PDF",
       importPdfHelper: "El PDF permanece en este dispositivo. Solo se renderiza y guarda la página elegida como fondo de la hoja.",
@@ -884,7 +879,8 @@ const es: Messages = {
       importThisPage: "Usar esta página",
       loadingPreview: "Cargando vista previa...",
       untitled: "Sin título",
-      fileMenu: "Archivo"
+      fileMenu: "Archivo",
+      fileMenuLabel: "Importar/Exportar"
     },
     geometryHelper: {
       idle: "Traza figuras precisas manteniendo la escala de la hoja para la impresión.",

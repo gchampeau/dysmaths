@@ -1414,6 +1414,56 @@ input {
   font-family: var(--font-display);
 }
 
+.document-page-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 16px;
+  border: 1px solid rgba(222, 218, 207, 0.62);
+  background: rgba(255, 253, 249, 0.7);
+  box-shadow: none;
+}
+
+.document-page-status,
+.document-page-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.document-page-toggle {
+  min-width: 7rem;
+  justify-content: center;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 78%, white);
+}
+
+.document-page-add {
+  min-height: 1.9rem;
+  padding: 0.28rem 0.58rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(255, 252, 247, 0.72);
+}
+
+.document-file-menu {
+  margin-top: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.document-file-menu .file-menu-toggle {
+  padding: 0.26rem 0.62rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .sheet-style-picker {
   display: grid;
   gap: 0.35rem;
@@ -4130,27 +4180,40 @@ input {
   gap: 0.2rem;
 }
 
+.page-nav-arrow,
 .page-nav-toggle {
   appearance: none;
   -webkit-appearance: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.3rem 0.55rem;
-  border: 1px solid rgba(92, 108, 129, 0.16);
-  border-radius: 8px;
-  background: rgba(255, 252, 247, 0.94);
-  color: var(--ink);
+  padding: 0.24rem 0.48rem;
+  border: 1px solid rgba(92, 108, 129, 0.12);
+  border-radius: 7px;
+  background: rgba(255, 252, 247, 0.78);
+  color: color-mix(in srgb, var(--ink) 82%, white);
   cursor: pointer;
-  min-height: 2rem;
+  min-height: 1.85rem;
   white-space: nowrap;
-  transition: background 0.1s;
+  transition: background 0.1s, color 0.1s, opacity 0.1s;
 }
 
+.page-nav-arrow {
+  width: 1.85rem;
+  padding: 0;
+}
+
+.page-nav-arrow:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.page-nav-arrow:not(:disabled):hover,
 .page-nav-toggle:hover {
-  background: rgba(92, 108, 129, 0.06);
+  background: rgba(92, 108, 129, 0.045);
 }
 
 .page-menu-dropdown,
@@ -4185,14 +4248,49 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 1px solid rgba(92, 108, 129, 0.12);
-  border-radius: 8px;
-  background: none;
-  color: color-mix(in srgb, var(--ink) 35%, transparent);
+  min-height: 1.85rem;
+  padding: 0.24rem 0.58rem;
+  border: 1px solid rgba(92, 108, 129, 0.1);
+  border-radius: 7px;
+  background: rgba(255, 252, 247, 0.5);
+  color: color-mix(in srgb, var(--ink) 46%, transparent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  transition: color 0.1s, background 0.1s;
+  transition: color 0.1s, background 0.1s, border-color 0.1s, opacity 0.1s;
+}
+
+.page-nav-delete-text {
+  width: auto;
+}
+
+.page-nav-delete:not(:disabled):hover {
+  background: rgba(192, 57, 43, 0.06);
+  border-color: rgba(192, 57, 43, 0.18);
+  color: color-mix(in srgb, #c0392b 72%, var(--ink));
+}
+
+.page-nav-delete:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .document-page-bar {
+    align-items: stretch;
+  }
+
+  .document-page-status,
+  .document-page-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .document-page-add {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
 }
 
 .page-nav-delete:hover {
