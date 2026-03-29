@@ -869,8 +869,6 @@ type DocumentPageBarProps = {
   onAddPage: () => void;
   onSwitchPage: (pageId: string) => void;
   onDeletePage: (pageId: string) => void;
-  onExportFile: () => void;
-  onImportFile: () => void;
 };
 
 export function DocumentPageBar({
@@ -879,35 +877,28 @@ export function DocumentPageBar({
   activePageId,
   onAddPage,
   onSwitchPage,
-  onDeletePage,
-  onExportFile,
-  onImportFile
+  onDeletePage
 }: DocumentPageBarProps) {
   const [pageMenuOpen, setPageMenuOpen] = useState(false);
-  const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const pageMenuRef = useRef<HTMLDivElement>(null);
-  const fileMenuRef = useRef<HTMLDivElement>(null);
   const activeIndex = Math.max(0, pages.findIndex((page) => page.id === activePageId));
   const canGoPrevious = activeIndex > 0;
   const canGoNext = activeIndex < pages.length - 1;
   const activePage = pages[activeIndex] ?? null;
 
   useEffect(() => {
-    if (!pageMenuOpen && !fileMenuOpen) return;
+    if (!pageMenuOpen) return;
 
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
       if (pageMenuRef.current && !pageMenuRef.current.contains(target)) {
         setPageMenuOpen(false);
       }
-      if (fileMenuRef.current && !fileMenuRef.current.contains(target)) {
-        setFileMenuOpen(false);
-      }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [pageMenuOpen, fileMenuOpen]);
+  }, [pageMenuOpen]);
 
   if (pages.length === 0) {
     return null;
@@ -970,31 +961,6 @@ export function DocumentPageBar({
           ))}
         </div>
       ) : null}
-      <div className="file-menu-wrapper document-file-menu" ref={fileMenuRef}>
-        <button type="button" className="toolbar-action ghost file-menu-toggle" onClick={() => setFileMenuOpen(!fileMenuOpen)} title={t("pages.fileMenu")}>
-          {t("pages.fileMenuLabel")}
-        </button>
-        {fileMenuOpen ? (
-          <div className="file-menu-dropdown" role="menu">
-            <button type="button" className="file-menu-item" role="menuitem" onClick={() => { onExportFile(); setFileMenuOpen(false); }}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              {t("pages.exportFile")}
-            </button>
-            <button type="button" className="file-menu-item" role="menuitem" onClick={() => { onImportFile(); setFileMenuOpen(false); }}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-                {t("pages.importFile")}
-              </button>
-            </div>
-        ) : null}
-      </div>
     </div>
   );
 }
