@@ -19,6 +19,10 @@ Dysmaths helps users:
 - work with a cleaner, more guided layout
 - use a school-style long division tool
 - edit math blocks without relying on handwriting
+- optionally use a dyslexia-friendly font
+- import an image or a PDF page as the sheet background
+- create multi-page documents
+- import and export documents as `.dysmaths` files
 - preview math clearly before exporting or printing
 - use the app like a lightweight installable web app
 
