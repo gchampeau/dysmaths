@@ -5383,20 +5383,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setPageIndex(newIndex);
   }
 
-  function handleExportFile() {
-    const targetId = pageIndex.activePageId;
-    if (!targetId) return;
-
-    const meta = pageIndex.pages.find((d) => d.id === targetId);
-    if (!meta) return;
-
-    exportPageToFile(meta, state);
-  }
-
-  function handleImportFile() {
-    fileInputRef.current?.click();
-  }
-
   function destroyPdfImportDocument() {
     const currentDocument = pdfImportDocumentRef.current;
     pdfImportDocumentRef.current = null;
@@ -6080,8 +6066,6 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
               onAddPage={handleNewPage}
               onSwitchPage={handleSwitchPage}
               onDeletePage={handleDeletePage}
-              onExportFile={handleExportFile}
-              onImportFile={handleImportFile}
             />
           ) : null}
           <div className="document-canvas-viewport">
