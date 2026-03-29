@@ -129,7 +129,7 @@ function createExportCanvasNode(canvasNode: HTMLDivElement, sheetStyle: SheetSty
   };
 }
 
-async function renderCanvasImage(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, sheetBackground: ImportedSheetBackground | null = null) {
+export async function renderCanvasImage(canvasNode: HTMLDivElement, sheetStyle: SheetStyle, sheetBackground: ImportedSheetBackground | null = null) {
   const exportNode = createExportCanvasNode(canvasNode, sheetStyle, sheetBackground);
 
   try {

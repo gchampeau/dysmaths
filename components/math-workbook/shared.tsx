@@ -734,7 +734,11 @@ export function createDefaultHeaderTextBoxes(sheetStyle: SheetStyle, labels: Def
   ];
 }
 
-export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: DefaultDocumentLabels = DEFAULT_DOCUMENT_LABELS): WriterState {
+export function createDefaultState(
+  sheetStyle: SheetStyle = "seyes",
+  labels: DefaultDocumentLabels = DEFAULT_DOCUMENT_LABELS,
+  includeDefaultHeaderTextBoxes = true
+): WriterState {
   return {
     schemaVersion: WRITER_STATE_SCHEMA_VERSION,
     title: labels.title,
@@ -751,7 +755,7 @@ export function createDefaultState(sheetStyle: SheetStyle = "seyes", labels: Def
     textHtml: DEFAULT_TEXT_HTML,
     blocks: [],
     symbols: [],
-    textBoxes: createDefaultHeaderTextBoxes(sheetStyle, labels),
+    textBoxes: includeDefaultHeaderTextBoxes ? createDefaultHeaderTextBoxes(sheetStyle, labels) : [],
     strokes: [],
     geometry: []
   };
