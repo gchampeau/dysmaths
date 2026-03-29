@@ -18,10 +18,12 @@ import {
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {toBlob} from "html-to-image";
+import {jsPDF} from "jspdf";
 import {type AppLocale} from "@/i18n/routing";
 import {usePathname, useRouter} from "@/i18n/navigation";
 import {PWA_INSTALLABLE_EVENT, PWA_INSTALLED_EVENT} from "@/components/pwa-registration";
-import {exportWorkbookPdf, exportWorkbookPng, printWorkbook} from "@/components/math-workbook/export-utils";
+import {exportWorkbookPng, renderCanvasImage} from "@/components/math-workbook/export-utils";
+import {safeFileName} from "@/components/math-workbook/shared";
 import {DrawCanvasLayer, GeometryCanvasLayer} from "@/components/math-workbook/canvas-layers";
 import {FloatingMathBlockItem, FloatingMathSymbolItem, FloatingTextBoxItem} from "@/components/math-workbook/canvas-items";
 import {renderArithmeticInlineEditor} from "@/components/math-workbook/inline-editor-arithmetic";
@@ -5661,6 +5663,14 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setOpenMenu(null);
   }
 
+  function waitForCanvasRefresh() {
+    return new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => resolve());
+      });
+    });
+  }
+
   async function exportPdf() {
     if (!canvasRef.current) {
       return;
@@ -5669,7 +5679,46 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setIsExporting("pdf");
 
     try {
-      await exportWorkbookPdf(canvasRef.current, state.sheetStyle, state.title, state.sheetBackground);
+      const originalPageId = pageIndex.activePageId;
+      const pageIds = pageIndex.pages.map((page) => page.id);
+      const pdf = new jsPDF({orientation: "portrait", unit: "pt", format: "a4"});
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < pageIds.length; i += 1) {
+        const pageId = pageIds[i];
+        const loaded = loadPageState(pageId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+
+        if (!loaded) {
+          continue;
+        }
+
+        switchToPage(pageId, pageIndex, true);
+        await waitForCanvasRefresh();
+
+        if (!canvasRef.current) {
+          continue;
+        }
+
+        const {imageUrl, cleanup} = await renderCanvasImage(canvasRef.current, loaded.sheetStyle, loaded.sheetBackground);
+
+        try {
+          if (pdf.getNumberOfPages() > 1 || i > 0) {
+            pdf.addPage();
+          }
+
+          pdf.addImage(imageUrl, "PNG", 0, 0, pageWidth, pageHeight);
+        } finally {
+          cleanup();
+        }
+      }
+
+      if (originalPageId && originalPageId !== pageIndex.activePageId) {
+        switchToPage(originalPageId, pageIndex, true);
+        await waitForCanvasRefresh();
+      }
+
+      pdf.save(`${safeFileName(state.title) || "maths-facile"}.pdf`);
     } finally {
       setIsExporting(null);
     }
@@ -5697,7 +5746,95 @@ function createGeometryShapeFromDraft(draft: GeometryDraft): Exclude<GeometrySha
     setIsExporting("print");
 
     try {
-      await printWorkbook(canvasRef.current, state.sheetStyle, state.title, state.sheetBackground);
+      const originalPageId = pageIndex.activePageId;
+      const pageIds = pageIndex.pages.map((page) => page.id);
+      const pages: Array<{imageUrl: string}> = [];
+
+      for (const pageId of pageIds) {
+        const loaded = loadPageState(pageId, defaultSheetStyle, workbookUi.defaultDocumentLabels);
+
+        if (!loaded) {
+          continue;
+        }
+
+        switchToPage(pageId, pageIndex, true);
+        await waitForCanvasRefresh();
+
+        if (!canvasRef.current) {
+          continue;
+        }
+
+        const {imageUrl, cleanup} = await renderCanvasImage(canvasRef.current, loaded.sheetStyle, loaded.sheetBackground);
+
+        try {
+          pages.push({imageUrl});
+        } finally {
+          cleanup();
+        }
+      }
+
+      if (originalPageId && originalPageId !== pageIndex.activePageId) {
+        switchToPage(originalPageId, pageIndex, true);
+        await waitForCanvasRefresh();
+      }
+
+      const printWindow = window.open("", "_blank");
+
+      if (!printWindow) {
+        return;
+      }
+
+      const safeTitle = state.title || "maths-facile";
+      printWindow.document.title = `${safeTitle} - impression`;
+      printWindow.document.open();
+      printWindow.document.write(`<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>${safeTitle} - impression</title>
+    <style>
+      @page { size: A4 portrait; margin: 0; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: white;
+      }
+      body {
+        display: block;
+      }
+      .page {
+        break-after: page;
+        page-break-after: always;
+        width: 210mm;
+        height: 297mm;
+      }
+      .page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+      img {
+        display: block;
+        width: 210mm;
+        height: 297mm;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    ${pages
+      .map((page, index) => `<div class="page"><img src="${page.imageUrl}" alt="${safeTitle} - page ${index + 1}" /></div>`)
+      .join("")}
+    <script>
+      const firePrint = () => {
+        window.focus();
+        window.print();
+      };
+      window.addEventListener('load', () => window.setTimeout(firePrint, 80), { once: true });
+      window.addEventListener('afterprint', () => window.close(), { once: true });
+    </script>
+  </body>
+</html>`);
+      printWindow.document.close();
     } finally {
       setIsExporting(null);
     }
