@@ -227,7 +227,7 @@ const en: Messages = {
       smallGrid: "Small grid",
       lined: "Ruled paper",
       blank: "Blank paper",
-      imported: "Import"
+      imported: "Import..."
     },
     geometryTools: {
       point: {label: "Point", hint: "Place a point"},
@@ -495,7 +495,7 @@ const fr: Messages = {
       smallGrid: "Petits carreaux",
       lined: "Feuille lignée",
       blank: "Feuille blanche",
-      imported: "Importer"
+      imported: "Importer..."
     },
     geometryTools: {
       point: {label: "Point", hint: "Placer un point"},
@@ -763,7 +763,7 @@ const es: Messages = {
       smallGrid: "Cuadrícula pequeña",
       lined: "Hoja rayada",
       blank: "Hoja en blanco",
-      imported: "Importar"
+      imported: "Importar..."
     },
     geometryTools: {
       point: {label: "Punto", hint: "Colocar un punto"},
